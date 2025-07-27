@@ -8,8 +8,8 @@ conda activate rag
 pip install -r requirements.txt
 ```
 
+Changed the path in download.py and run it:
 ```bash
-export HF_HOME="/home/v-zhaowan/zhaowang/rag/data"
 python download.py
 ```
 
