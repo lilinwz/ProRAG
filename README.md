@@ -8,7 +8,7 @@ conda activate rag
 pip install -r requirements.txt
 ```
 
-Changed the path in download.py and run it:
+Changed your local data path in download.py and run it:
 ```bash
 python download.py
 ```
