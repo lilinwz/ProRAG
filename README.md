@@ -14,3 +14,7 @@ python download.py
 ```
 
 tmux new -s rag
+
+## Log
+7.26 Start: Search the dataset
+7.27 Preprocess data: phase1
