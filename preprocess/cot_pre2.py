@@ -40,12 +40,13 @@ def generate_thought_batch(prompts, model, tokenizer):
         except:
             pass
 
-def process_batched(raw_data, model, tokenizer, batch_size=4): # 可以调整 batch_size
-    data = []
+def process_batched(raw_data, model, tokenizer, batch_size=4):
+    with open(output_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
     current_batch_prompts = []
     current_batch_items = []
 
-    for idx, item in enumerate(raw_data):
+    for idx, item in enumerate(raw_data[3040:]):
         query = item.get('query')
         chain = item.get('chain_of_thought', [])
         answer = item.get('answer')
@@ -141,7 +142,7 @@ if __name__ == "__main__":
     with open(input_file, 'r', encoding='utf-8') as f:
         raw_data = json.load(f)
     
-    output = process_batched(raw_data, model, tokenizer, batch_size=128)
+    output = process_batched(raw_data, model, tokenizer, batch_size=32)
 
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(output, f, ensure_ascii=False, indent=4)
