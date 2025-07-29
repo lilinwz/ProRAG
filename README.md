@@ -24,4 +24,10 @@ tmux new -s rag
 ### 7.28 Prepare data and SFT
     mistake: carelessly delete 2048 items generated yesterday
     regenerate 5245 items (update to huggingface) (not all)
-    sft qwen3-8b on my data (LoRA)
+    sft qwen3-8b on my data (LoRA without valid set and test set)
+    possible problem 1: all train data is 2-hop, which means no single-hop and multi(3+)-hop
+        solved: all dataset contains multi-hop questions, and we focus on multihop rather than single-hop (more general)
+    possible problem 2: some subanswer could not be retrievaled. (how to say idk)
+        1. wait for training result
+        2. add some extra training data
+        but actually we deal with it in phase 2, so it may don't matter.

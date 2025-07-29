@@ -4,6 +4,7 @@ with open("/home/v-zhaowan/zhaowang/rag/data/raw/train4.json", 'r', encoding='ut
     data = json.load(f)
 
 new_data = []
+# a = {}
 for item in data:
     idx = item['id']
     query = item['query']
@@ -16,6 +17,12 @@ for item in data:
     info_in = query
     info_out = ""
 
+    # if len(chain) in a:
+    #     a[len(chain)] += 1
+    # else:
+    #     a[len(chain)] = 1
+    if len(chain) == 1:
+        continue
     data_item = [{"role": "user", "content": info_in}]
     for i, sub_item in enumerate(chain):
         subquery = sub_item['subquery']
@@ -35,5 +42,6 @@ for item in data:
     new_data.append(data_item)
 
 print(len(new_data))
+# print(a)
 with open("/home/v-zhaowan/zhaowang/rag/data/train.json", "w") as f:
     f.write(json.dumps(new_data, ensure_ascii=False, indent=4))
