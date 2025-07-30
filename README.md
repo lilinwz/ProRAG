@@ -1,7 +1,4 @@
-## Usage
-
-
-### Environment
+## Environment
 ```bash
 conda create -n rag python=3.10
 conda activate rag
@@ -13,7 +10,21 @@ Changed your local data path in download.py and run it:
 python download.py
 ```
 
-tmux new -s rag
+## Data
+SFT: MulSiQue answerable train dataset (about 19k) -> (Sampling) 7k
+MC: MulSiQue answerable dev dataset (about 2.5k) -> (Sampling) 2k
+PPO: 
+
+## Experiment setup
+
+### baseline
+
+### benchmark
+Hotpot、2WikiMultiHopQA、Frames
+MulSiQue(Main): using paragraph in the data as retrieval
+
+### Ablation
+sft model, DPO model, PPO model(, GRPO model)
 
 ## Log
 ### 7.27 Start

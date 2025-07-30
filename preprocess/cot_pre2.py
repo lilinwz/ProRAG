@@ -6,9 +6,6 @@ import os
 input_file = "/home/v-zhaowan/zhaowang/rag/data/raw/train.json"
 output_file = "/home/v-zhaowan/zhaowang/rag/data/raw/train1.json"
 
-# input_file = "/home/v-zhaowan/zhaowang/rag/data/raw/dev.json"
-# output_file = "/home/v-zhaowan/zhaowang/rag/data/raw/dev1.json"
-
 def generate_thought_batch(prompts, model, tokenizer):
     messages_batch = [[{"role": "user", "content": prompt}] for prompt in prompts]
     texts = [tokenizer.apply_chat_template(
@@ -44,12 +41,15 @@ def generate_thought_batch(prompts, model, tokenizer):
             pass
 
 def process_batched(raw_data, model, tokenizer, batch_size=4):
-    with open(output_file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    try:
+        with open(output_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except:
+        data = []
     current_batch_prompts = []
     current_batch_items = []
 
-    for idx, item in enumerate(raw_data[3040:]):
+    for idx, item in enumerate(raw_data[len(data):]):
         query = item.get('query')
         chain = item.get('chain_of_thought', [])
         answer = item.get('answer')
