@@ -8,7 +8,7 @@ import os
 # --- config ---
 MODEL_NAME = "Qwen/Qwen3-8B"
 TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train.json"
-OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save"
+OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/730"
 
 LORA_R = 64
 LORA_ALPHA = 16
@@ -24,11 +24,11 @@ TARGET_MODULES = [
 ]
 
 NUM_TRAIN_EPOCHS = 3
-PER_DEVICE_TRAIN_BATCH_SIZE = 4 
-GRADIENT_ACCUMULATION_STEPS = 8
+PER_DEVICE_TRAIN_BATCH_SIZE = 8 
+GRADIENT_ACCUMULATION_STEPS = 4
 LEARNING_RATE = 2e-5         
 MAX_SEQ_LENGTH = 2048        
-SAVE_STEPS = 500             
+SAVE_STEPS = 100             
 LOGGING_STEPS = 10          
 BF16 = True
 FP16 = False

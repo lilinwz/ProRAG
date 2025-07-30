@@ -16,12 +16,12 @@ python download.py
 tmux new -s rag
 
 ## Log
-### 7.26 Start
+### 7.27 Start
     Search for the dataset: MulSiQue(phase 1 train), frames, 2wikimultihopQA, HotpotQA
-### 7.27 Prepare data
+### 7.28 Prepare data
     preprocess for problems in MulSiQue (non-question)
     prepare for training data: generate 2048 items(findings: 32 batch could be faster)
-### 7.28 Prepare data and SFT
+### 7.29 Prepare data and SFT
     mistake: carelessly delete 2048 items generated yesterday
     regenerate 5245 items (update to huggingface) (not all)
     sft qwen3-8b on my data (LoRA without valid set and test set)
@@ -31,3 +31,7 @@ tmux new -s rag
         1. wait for training result
         2. add some extra training data
         but actually we deal with it in phase 2, so it may don't matter.
+### 7.30 Prepare data, SFT and brainstorm
+    mistake: the num of dataset (rerun or continue) should be 19k rather than 9k (7k after processing)
+    sft qwen3-8b on old data (7k): may be enough
+    brainstorm about the Mento Carlo sample on the dev set of MulSiQue
