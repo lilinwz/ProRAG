@@ -11,7 +11,8 @@ for item in data:
         end = item['chain_of_thought'].rfind('}') + 1
         item['chain_of_thought'] = json.loads(item['chain_of_thought'][start:end])["new_CoT"]
         new_data.append(item)
-    except:
+    except Exception as e:
+        # print(f"Error processing item: {item['id']}, Error: {e}")
         # print(item['chain_of_thought'])
         # break
         ans += 1

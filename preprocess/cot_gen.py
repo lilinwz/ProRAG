@@ -259,6 +259,9 @@ if __name__ == "__main__":
     with open(input_file, 'r', encoding='utf-8') as f:
         raw_data = json.load(f)
 
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump([], f, ensure_ascii=False, indent=4)
+
     with open(output_file, 'r', encoding='utf-8') as f:
         a = json.load(f)
     

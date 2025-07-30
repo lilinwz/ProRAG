@@ -11,8 +11,10 @@ python download.py
 ```
 
 ## Data
-SFT: MulSiQue answerable train dataset (about 19k) -> (Sampling) 7k
-MC: MulSiQue answerable dev dataset (about 2.5k) -> (Sampling) 2k
+SFT: MulSiQue answerable train dataset (about 19k) -> (Sampling) 7.8k
+
+MC: MulSiQue answerable dev dataset (about 2.5k) -> (Sampling) 1.5k
+
 PPO: 
 
 ## Experiment setup
@@ -21,6 +23,7 @@ PPO:
 
 ### benchmark
 Hotpot、2WikiMultiHopQA、Frames
+
 MulSiQue(Main): using paragraph in the data as retrieval
 
 ### Ablation
@@ -46,3 +49,4 @@ sft model, DPO model, PPO model(, GRPO model)
     mistake: the num of dataset (rerun or continue) should be 19k rather than 9k (7k after processing)
     sft qwen3-8b on old data (7k): may be enough
     brainstorm about the Mento Carlo sample on the dev set of MulSiQue
+    generate dev data set (about 1.5k)
