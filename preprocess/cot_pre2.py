@@ -6,6 +6,9 @@ import os
 input_file = "/home/v-zhaowan/zhaowang/rag/data/raw/train.json"
 output_file = "/home/v-zhaowan/zhaowang/rag/data/raw/train1.json"
 
+# input_file = "/home/v-zhaowan/zhaowang/rag/data/raw/dev.json"
+# output_file = "/home/v-zhaowan/zhaowang/rag/data/raw/dev1.json"
+
 def generate_thought_batch(prompts, model, tokenizer):
     messages_batch = [[{"role": "user", "content": prompt}] for prompt in prompts]
     texts = [tokenizer.apply_chat_template(
