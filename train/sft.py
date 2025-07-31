@@ -97,10 +97,10 @@ def preprocess_function(examples):
         current_labels.extend(encoded_turn)
         
         for i, content in enumerate(item["assistant"]):
-            turn_text += content
+            turn_text = content
             encoded_turn = tokenizer.encode(turn_text, add_special_tokens=False)
             full_text += turn_text
-            if i %2 == 0:
+            if i % 2 == 0:
                 current_labels.extend(encoded_turn)
             else:
                 current_labels.extend([-100] * len(encoded_turn))
@@ -145,6 +145,11 @@ processed_dataset = dataset.map(
     num_proc=os.cpu_count() if os.cpu_count() else 1,
     remove_columns=["conversation"],
 )
+
+# print(f"Processed dataset size: {len(processed_dataset)} samples.")
+# print("Sample input:", tokenizer.decode(processed_dataset[0]["input_ids"], skip_special_tokens=False))
+# print(f"Sample input IDs: {processed_dataset[0]['input_ids']}")
+# print(f"Sample input IDs: {processed_dataset[0]['labels']}")
 
 # --- Trainer Config ---
 print("Setting up Trainer...")
