@@ -42,6 +42,18 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto"
 )
 
+custom_special_tokens = [
+    "<think>", "</think>",
+    "<subquery>", "</subquery>",
+    "<retrieval>", "</retrieval>",
+    "<subanswer>", "</subanswer>",
+    "<answer>", "</answer>"
+]
+
+num_added_tokens = tokenizer.add_special_tokens({"additional_special_tokens": custom_special_tokens})
+model.resize_token_embeddings(len(tokenizer))
+print(f"Added {num_added_tokens} new special tokens to the tokenizer and resized model embeddings.")
+
 # --- LoRA ---
 lora_config = LoraConfig(
     r=LORA_R,
@@ -66,32 +78,36 @@ def preprocess_function(examples):
     formatted_texts = []
     labels = []
 
-    for conversation in examples["conversation"]:
+    for item in examples["conversation"]:
         full_text = ""
         current_labels = []
 
-        for i, turn in enumerate(conversation):
-            role = turn["role"]
-            content = turn["content"]
+        user_prefix = f"<|im_start|>user\n"
+        user_suffix = f"<|im_end|>\n"
+        turn_text = user_prefix + item["user"] + user_suffix        
+        encoded_turn = tokenizer.encode(turn_text, add_special_tokens=False)
+        full_text += turn_text
+        current_labels.extend([-100] * len(encoded_turn))
 
-            if role == "user":
-                user_prefix = f"<|im_start|>user\n"
-                user_suffix = f"<|im_end|>\n"
-                turn_text = user_prefix + content + user_suffix
-                
-                encoded_turn = tokenizer.encode(turn_text, add_special_tokens=False)
-                full_text += turn_text
+        assistant_prefix = f"<|im_start|>assistant\n"
+        assistant_suffix = f"<|im_end|>\n"
+        
+        encoded_turn = tokenizer.encode(assistant_prefix, add_special_tokens=False)
+        full_text += assistant_prefix
+        current_labels.extend(encoded_turn)
+        
+        for i, content in enumerate(item["assistant"]):
+            turn_text += content
+            encoded_turn = tokenizer.encode(turn_text, add_special_tokens=False)
+            full_text += turn_text
+            if i %2 == 0:
+                current_labels.extend(encoded_turn)
+            else:
                 current_labels.extend([-100] * len(encoded_turn))
 
-            elif role == "assistant":
-                assistant_prefix = f"<|im_start|>assistant\n"
-                assistant_suffix = f"<|im_end|>\n"
-                turn_text = assistant_prefix + content + assistant_suffix
-                
-                encoded_turn = tokenizer.encode(turn_text, add_special_tokens=False)
-                full_text += turn_text
-    
-                current_labels.extend(encoded_turn)
+        encoded_turn = tokenizer.encode(assistant_suffix, add_special_tokens=False)
+        full_text += assistant_suffix
+        current_labels.extend(encoded_turn)
 
         full_text += tokenizer.eos_token
         encoded_eos = tokenizer.encode(tokenizer.eos_token, add_special_tokens=False)

@@ -50,3 +50,6 @@ sft model, DPO model, PPO model(, GRPO model)
     sft qwen3-8b on old data (7k): may be enough
     brainstorm about the Mento Carlo sample on the dev set of MulSiQue
     generate dev data set (about 1.5k)
+### 7.31 Prepare data, SFT and test
+    changed the sft.py and test (mulsique)
+    
