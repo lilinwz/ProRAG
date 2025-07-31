@@ -51,5 +51,7 @@ sft model, DPO model, PPO model(, GRPO model)
     brainstorm about the Mento Carlo sample on the dev set of MulSiQue
     generate dev data set (about 1.5k)
 ### 7.31 Prepare data, SFT and test
-    changed the sft.py and test (mulsique)
+    prepare train_full.json
+    changed sft.py: add special token
+    write test/mulsique.py and sample/gen.py
     

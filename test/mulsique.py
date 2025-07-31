@@ -11,6 +11,7 @@ LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/730/final_adapter"
 TEST_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_test.jsonl"
 MAX_MODEL_INPUT_LENGTH = 2048
 MAX_GENERATION_LENGTH = 512
+MAX_HOP = 5
 
 class StopOnKeywords(StoppingCriteria):
     def __init__(self, tokenizer, stop_tokens):
@@ -45,7 +46,30 @@ class SimpleBM25Retriever:
             )
         return retrieved_docs_with_info
 
-def run_rag_inference(model, tokenizer, question, retriever, max_input_len, max_gen_len, max_hops=5):
+def generate(model, tokenizer, prompt, max_input_len=MAX_MODEL_INPUT_LENGTH, max_gen_len=MAX_GENERATION_LENGTH):
+    input_ids = tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False).to(model.device)
+    if input_ids.shape[1] > max_input_len:
+        input_ids = input_ids[:, -max_input_len:]
+        
+    stop_tokens = ["<retrieval>", "<|im_end|>"]
+    stopping_criteria = StoppingCriteriaList([StopOnKeywords(tokenizer, stop_tokens)])
+
+    gen_output_ids = model.generate(
+        input_ids=input_ids,
+        max_new_tokens=max_gen_len, 
+        do_sample=True,
+        pad_token_id=tokenizer.pad_token_id,
+        eos_token_id=tokenizer.eos_token_id,
+        stopping_criteria=stopping_criteria
+    )
+    
+    response = tokenizer.decode(
+        gen_output_ids[0, input_ids.shape[1]:], 
+        skip_special_tokens=False
+    )
+    return response
+
+def run_rag_inference(model, tokenizer, question, retriever, max_hops=MAX_HOP):
     query_list = []
     context_list = []
     generated_responses = []
@@ -53,26 +77,7 @@ def run_rag_inference(model, tokenizer, question, retriever, max_input_len, max_
     final_answer = None
 
     for hop in range(max_hops):
-        current_prompt_input_ids = tokenizer.encode(current_prompt, return_tensors="pt", add_special_tokens=False).to(model.device)
-        if current_prompt_input_ids.shape[1] > max_input_len:
-            current_prompt_input_ids = current_prompt_input_ids[:, -max_input_len:]
-
-        stop_tokens = ["<retrieval>", "<|im_end|>"]
-        stopping_criteria = StoppingCriteriaList([StopOnKeywords(tokenizer, stop_tokens)])
-
-        gen_output_ids = model.generate(
-            current_prompt_input_ids,
-            max_new_tokens=max_gen_len, 
-            do_sample=True,
-            pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-            stopping_criteria=stopping_criteria
-        )
-        
-        generated_assistant_response = tokenizer.decode(
-            gen_output_ids[0, current_prompt_input_ids.shape[1]:], 
-            skip_special_tokens=False
-        )
+        generated_assistant_response = generate(model, tokenizer, current_prompt)
         current_prompt += generated_assistant_response
         generated_responses.append(generated_assistant_response)
 
@@ -89,7 +94,7 @@ def run_rag_inference(model, tokenizer, question, retriever, max_input_len, max_
                 retrieved_docs = retriever.retrieve(subquery, top_k=3)
                 retrieved_docs_text = "\n".join(retrieved_docs)
                 context_list.append(retrieved_docs_text)
-                current_prompt += f"{retrieved_docs_text}\n</retrieval>\n"
+                current_prompt += f"\n{retrieved_docs_text}\n</retrieval>\n"
             else:
                 break
         else:
@@ -137,6 +142,16 @@ if __name__ == "__main__":
     
     model_name = "Qwen/Qwen3-8B"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    custom_special_tokens = [
+        "<think>", "</think>",
+        "<subquery>", "</subquery>",
+        "<retrieval>", "</retrieval>",
+        "<subanswer>", "</subanswer>",
+        "<answer>", "</answer>"
+    ]
+    num_added_tokens = tokenizer.add_special_tokens({"additional_special_tokens": custom_special_tokens})
+    
     base_model = AutoModelForCausalLM.from_pretrained(
         model_name,
         torch_dtype=torch.bfloat16,
@@ -146,6 +161,9 @@ if __name__ == "__main__":
     from peft import PeftModel
     model = PeftModel.from_pretrained(base_model, LORA_PATH)
     model = model.merge_and_unload()
+    model.resize_token_embeddings(len(tokenizer))
+    print(f"Added {num_added_tokens} new special tokens to the tokenizer and resized model embeddings.")
+    
     model.eval()
 
     print(f"Loading test data from {TEST_DATA_PATH}...")
@@ -162,11 +180,7 @@ if __name__ == "__main__":
         all_paragraphs_for_retrieval = sample["paragraphs"] 
         retriever = SimpleBM25Retriever(all_paragraphs_for_retrieval)
 
-        predicted_answer, subquery, retrieved_context, generated_text = run_rag_inference(
-            model, tokenizer, question, retriever,
-            max_input_len=MAX_MODEL_INPUT_LENGTH,
-            max_gen_len=MAX_GENERATION_LENGTH
-        )
+        predicted_answer, subquery, retrieved_context, generated_text = run_rag_inference(model, tokenizer, question, retriever)
         
         f1 = calculate_f1(predicted_answer, golden_answer)
         all_f1_scores.append(f1)

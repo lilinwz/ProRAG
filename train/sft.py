@@ -8,7 +8,7 @@ import os
 # --- config ---
 MODEL_NAME = "Qwen/Qwen3-8B"
 TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train.json"
-OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/730"
+OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/731"
 
 LORA_R = 64
 LORA_ALPHA = 16
