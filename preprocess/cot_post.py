@@ -33,9 +33,9 @@ for item in data:
 
         info = f"\n{context}\n</retrieval>\n"
         data_item["assistant"].append(info)
-        info = f"<think>\n{cot2[i]}\n</think>\n<><subanswer>\n{subanswer}\n</subanswer>\n\n"
+        info = f"<think>\n{cot2[i]}\n</think>\n<subanswer>\n{subanswer}\n</subanswer>\n"
 
-    info += f"<think>\n{cot3}\n</think>\n<answer>\n{answer}\n</answer>"
+    info += f"<think>\n{cot3}\n</think>\n<answer>\n{answer}\n</answer>\n"
     data_item["assistant"].append(info)
 
     new_data.append(data_item)
