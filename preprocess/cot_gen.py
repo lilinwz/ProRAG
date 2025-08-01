@@ -3,8 +3,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import json
 import os
 
-input_file = "/home/v-zhaowan/zhaowang/rag/data/raw/train2.json"
-output_file = "/home/v-zhaowan/zhaowang/rag/data/raw/train3.json"
+input_file = "/home/v-zhaowan/zhaowang/rag/data/raw/train_full2.json"
+output_file = "/home/v-zhaowan/zhaowang/rag/data/raw/train_full3.json"
 
 def generate_batch(prompts, model, tokenizer):
     messages_batch = [[{"role": "user", "content": prompt}] for prompt in prompts]

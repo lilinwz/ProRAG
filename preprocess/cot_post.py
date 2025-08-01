@@ -1,10 +1,12 @@
 import json
+import random
 
-with open("/home/v-zhaowan/zhaowang/rag/data/raw/train4.json", 'r', encoding='utf-8') as f:
+with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_full4.json", 'r', encoding='utf-8') as f:
     data = json.load(f)
 
+random.shuffle(data)
 new_data = []
-# a = {}
+
 for item in data:
     idx = item['id']
     query = item['query']
@@ -14,10 +16,6 @@ for item in data:
     cot2 = item['cot2']
     cot3 = item['cot3']
     
-    # if len(chain) in a:
-    #     a[len(chain)] += 1
-    # else:
-    #     a[len(chain)] = 1
     if len(chain) == 1:
         continue
 
@@ -28,19 +26,45 @@ for item in data:
         subanswer = sub_item['sub-answer']
         context = sub_item['paragraph']
         
-        info += f"<think>\n{cot1[i]}\n</think>\n<subquery>\n{subquery}\n</subquery>\n<retrieval>"
-        data_item["assistant"].append(info)
+        data_item["assistant"].append("<think>\n")
+        data_item["assistant"].append(cot1[i])
+        data_item["assistant"].append("</think>\n")
 
-        info = f"\n{context}\n</retrieval>\n"
-        data_item["assistant"].append(info)
-        info = f"<think>\n{cot2[i]}\n</think>\n<subanswer>\n{subanswer}\n</subanswer>\n"
+        data_item["assistant"].append("<subquery>\n")
+        data_item["assistant"].append(subquery)
+        data_item["assistant"].append("</subquery>\n")
 
-    info += f"<think>\n{cot3}\n</think>\n<answer>\n{answer}\n</answer>\n"
-    data_item["assistant"].append(info)
+        data_item["assistant"].append("<retrieval>\n")
+        data_item["assistant"].append(context)
+        data_item["assistant"].append("</retrieval>\n")
+
+        data_item["assistant"].append("<think>\n")
+        data_item["assistant"].append(cot2[i])
+        data_item["assistant"].append("</think>\n")
+
+        data_item["assistant"].append("<subanswer>\n")
+        data_item["assistant"].append(subanswer)
+        data_item["assistant"].append("</subanswer>\n")
+
+    data_item["assistant"].append("<think>\n")
+    data_item["assistant"].append(cot3)
+    data_item["assistant"].append("</think>\n")
+
+    data_item["assistant"].append("<answer>\n")
+    data_item["assistant"].append(answer)
+    data_item["assistant"].append("</answer>\n")
 
     new_data.append(data_item)
 
 print(len(new_data))
-# print(a)
-with open("/home/v-zhaowan/zhaowang/rag/data/train.json", "w") as f:
-    f.write(json.dumps(new_data, ensure_ascii=False, indent=4))
+
+partition = 12000
+with open("/home/v-zhaowan/zhaowang/rag/data/train_sft.json", "w") as f:
+    f.write(json.dumps(new_data[:partition], ensure_ascii=False, indent=4))
+with open("/home/v-zhaowan/zhaowang/rag/data/train_rl.json", "w") as f:
+    f.write(json.dumps(new_data[partition:], ensure_ascii=False, indent=4))
+
+with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_sft.json", "w") as f:
+    f.write(json.dumps(data[:partition], ensure_ascii=False, indent=4))
+with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json", "w") as f:
+    f.write(json.dumps(data[partition:], ensure_ascii=False, indent=4))

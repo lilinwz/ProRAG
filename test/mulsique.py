@@ -7,8 +7,8 @@ from tqdm import tqdm
 import numpy as np
 from collections import Counter
 
-LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/730/final_adapter"
-TEST_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_test.jsonl"
+LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/731/final_adapter"
+TEST_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
 MAX_MODEL_INPUT_LENGTH = 2048
 MAX_GENERATION_LENGTH = 512
 MAX_HOP = 5
@@ -157,12 +157,12 @@ if __name__ == "__main__":
         torch_dtype=torch.bfloat16,
         device_map="auto"
     )
+    base_model.resize_token_embeddings(len(tokenizer))
+    print(f"Added {num_added_tokens} new special tokens to the tokenizer and resized model embeddings.")
 
     from peft import PeftModel
     model = PeftModel.from_pretrained(base_model, LORA_PATH)
     model = model.merge_and_unload()
-    model.resize_token_embeddings(len(tokenizer))
-    print(f"Added {num_added_tokens} new special tokens to the tokenizer and resized model embeddings.")
     
     model.eval()
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     for i, sample in tqdm(enumerate(test_samples), total=len(test_samples), desc="Running RAG inference"):
         question = sample["question"]
         golden_answer = [sample["answer"]]
-        golden_answer.extend(sample["answer_alias"])
+        golden_answer.extend(sample["answer_aliases"])
         
         all_paragraphs_for_retrieval = sample["paragraphs"] 
         retriever = SimpleBM25Retriever(all_paragraphs_for_retrieval)

@@ -1,14 +1,16 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from datasets import Dataset
+from trainer import CustomTrainer
+from data_collator import CustomDataCollator
 import json
 import os
 
 # --- config ---
 MODEL_NAME = "Qwen/Qwen3-8B"
-TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train.json"
-OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/731"
+TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train_sft.json"
+OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/81"
 
 LORA_R = 64
 LORA_ALPHA = 16
@@ -23,7 +25,7 @@ TARGET_MODULES = [
     "down_proj",
 ]
 
-NUM_TRAIN_EPOCHS = 3
+NUM_TRAIN_EPOCHS = 5
 PER_DEVICE_TRAIN_BATCH_SIZE = 8 
 GRADIENT_ACCUMULATION_STEPS = 4
 LEARNING_RATE = 2e-5         
@@ -76,63 +78,81 @@ def load_data(file_path):
 
 def preprocess_function(examples):
     formatted_texts = []
-    labels = []
+    labels_full = []
+    labels_spe = []
 
     for item in examples["conversation"]:
         full_text = ""
-        current_labels = []
+        current_labels_full = []
+        current_labels_spe = []
 
         user_prefix = f"<|im_start|>user\n"
         user_suffix = f"<|im_end|>\n"
         turn_text = user_prefix + item["user"] + user_suffix        
         encoded_turn = tokenizer.encode(turn_text, add_special_tokens=False)
         full_text += turn_text
-        current_labels.extend([-100] * len(encoded_turn))
+        current_labels_full.extend([-100] * len(encoded_turn))
+        current_labels_spe.extend([-100] * len(encoded_turn))
 
         assistant_prefix = f"<|im_start|>assistant\n"
         assistant_suffix = f"<|im_end|>\n"
         
         encoded_turn = tokenizer.encode(assistant_prefix, add_special_tokens=False)
         full_text += assistant_prefix
-        current_labels.extend(encoded_turn)
+        current_labels_full.extend([-100] * len(encoded_turn))
+        current_labels_spe.extend([-100] * len(encoded_turn))
         
         for i, content in enumerate(item["assistant"]):
-            turn_text = content
-            encoded_turn = tokenizer.encode(turn_text, add_special_tokens=False)
-            full_text += turn_text
-            if i % 2 == 0:
-                current_labels.extend(encoded_turn)
+            encoded_turn = tokenizer.encode(content, add_special_tokens=False)
+            full_text += content
+
+            if content[:-1] in custom_special_tokens:
+                current_labels_spe.extend(encoded_turn)
             else:
-                current_labels.extend([-100] * len(encoded_turn))
+                current_labels_spe.extend([-100] * len(encoded_turn))
+
+            if (i>0 and item["assistant"][i-1] == "<retrieval>\n") or content == "<retrieval>\n":
+                current_labels_full.extend([-100] * len(encoded_turn))
+            else:
+                current_labels_full.extend(encoded_turn)
 
         encoded_turn = tokenizer.encode(assistant_suffix, add_special_tokens=False)
         full_text += assistant_suffix
-        current_labels.extend(encoded_turn)
+        current_labels_full.extend([-100] * len(encoded_turn))
+        current_labels_spe.extend([-100] * len(encoded_turn))
 
         full_text += tokenizer.eos_token
         encoded_eos = tokenizer.encode(tokenizer.eos_token, add_special_tokens=False)
-        current_labels.extend(encoded_eos)
+        current_labels_spe.extend([-100] * len(encoded_eos))
+        current_labels_full.extend([-100] * len(encoded_eos))
         
         formatted_texts.append(full_text)
-        labels.append(current_labels)
+        labels_full.append(current_labels_full)
+        labels_spe.append(current_labels_spe)
 
 
     tokenized_inputs = tokenizer(
         formatted_texts,
         max_length=MAX_SEQ_LENGTH,
         truncation=True,
-        padding="max_length",
-        return_tensors="pt"
+        padding="max_length"
     )
 
-    padded_labels = []
-    for label_seq in labels:
-        if len(label_seq) > MAX_SEQ_LENGTH:
-            padded_labels.append(label_seq[:MAX_SEQ_LENGTH])
+    padded_labels_full = []
+    padded_labels_spe = []
+    for label_full_seq, label_spe_seq in zip(labels_full, labels_spe):
+        if len(label_full_seq) > MAX_SEQ_LENGTH:
+            padded_labels_full.append(label_full_seq[:MAX_SEQ_LENGTH])
         else:
-            padded_labels.append(label_seq + [-100] * (MAX_SEQ_LENGTH - len(label_seq)))
-    
-    tokenized_inputs["labels"] = torch.tensor(padded_labels)
+            padded_labels_full.append(label_full_seq + [-100] * (MAX_SEQ_LENGTH - len(label_full_seq)))
+
+        if len(label_spe_seq) > MAX_SEQ_LENGTH:
+            padded_labels_spe.append(label_spe_seq[:MAX_SEQ_LENGTH])
+        else:
+            padded_labels_spe.append(label_spe_seq + [-100] * (MAX_SEQ_LENGTH - len(label_spe_seq)))
+
+    tokenized_inputs["labels_full"] = padded_labels_full
+    tokenized_inputs["labels_special"] = padded_labels_spe
 
     return tokenized_inputs
 
@@ -146,6 +166,8 @@ processed_dataset = dataset.map(
     remove_columns=["conversation"],
 )
 
+print(processed_dataset[0].keys())  # Debugging line to check the first processed sample
+
 # print(f"Processed dataset size: {len(processed_dataset)} samples.")
 # print("Sample input:", tokenizer.decode(processed_dataset[0]["input_ids"], skip_special_tokens=False))
 # print(f"Sample input IDs: {processed_dataset[0]['input_ids']}")
@@ -153,6 +175,7 @@ processed_dataset = dataset.map(
 
 # --- Trainer Config ---
 print("Setting up Trainer...")
+custom_collator = CustomDataCollator()
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
     num_train_epochs=NUM_TRAIN_EPOCHS,
@@ -169,14 +192,17 @@ training_args = TrainingArguments(
     # greater_is_better=False,
     optim="adamw_torch", 
     warmup_ratio=0.03,
-    lr_scheduler_type="cosine"
+    lr_scheduler_type="cosine",
+    remove_unused_columns=False  # <--- 添加这一行
 )
 
-trainer = Trainer(
+trainer = CustomTrainer(
     model=model,
     args=training_args,
     train_dataset=processed_dataset,
     tokenizer=tokenizer,
+    data_collator=custom_collator,
+    special_token_weight=2.0
 )
 
 # --- train ---

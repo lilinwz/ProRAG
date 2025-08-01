@@ -51,7 +51,13 @@ sft model, DPO model, PPO model(, GRPO model)
     brainstorm about the Mento Carlo sample on the dev set of MulSiQue
     generate dev data set (about 1.5k)
 ### 7.31 Prepare data, SFT and test
-    prepare train_full.json
+    prepare train_full.json (13k)
     changed sft.py: add special token
     write test/mulsique.py and sample/gen.py
-    
+### 7.31 Prepare data, SFT
+    prepare train_full.json (14k) and divide it into train_sft.json (12k) and train_rl.json (2k)
+    problem: missing special token in output
+        rewrite sft.py and trainer: weight special token when calculating the loss
+    thought: PPO / GRPO / SFT, which one is better?
+        PPO / GRPO: format reward
+        SFT: rewight special token

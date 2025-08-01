@@ -1,6 +1,6 @@
 import json
 
-with open("/home/v-zhaowan/zhaowang/rag/data/raw/train3.json", 'r', encoding='utf-8') as f:
+with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_full3.json", 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 new_data = []
@@ -34,5 +34,5 @@ for item in data:
     new_data.append(item)
 
 print(len(new_data))
-with open("/home/v-zhaowan/zhaowang/rag/data/raw/train4.json", "w") as f:
+with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_full4.json", "w") as f:
     f.write(json.dumps(new_data, ensure_ascii=False, indent=4))
