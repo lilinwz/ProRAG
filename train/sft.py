@@ -106,7 +106,7 @@ def preprocess_function(examples):
             encoded_turn = tokenizer.encode(content, add_special_tokens=False)
             full_text += content
 
-            if content[:-1] in custom_special_tokens:
+            if content.strip() in custom_special_tokens:
                 current_labels_spe.extend(encoded_turn)
             else:
                 current_labels_spe.extend([-100] * len(encoded_turn))
@@ -166,13 +166,6 @@ processed_dataset = dataset.map(
     remove_columns=["conversation"],
 )
 
-print(processed_dataset[0].keys())  # Debugging line to check the first processed sample
-
-# print(f"Processed dataset size: {len(processed_dataset)} samples.")
-# print("Sample input:", tokenizer.decode(processed_dataset[0]["input_ids"], skip_special_tokens=False))
-# print(f"Sample input IDs: {processed_dataset[0]['input_ids']}")
-# print(f"Sample input IDs: {processed_dataset[0]['labels']}")
-
 # --- Trainer Config ---
 print("Setting up Trainer...")
 custom_collator = CustomDataCollator()
@@ -187,13 +180,11 @@ training_args = TrainingArguments(
     bf16=BF16,
     gradient_checkpointing=True, 
     gradient_checkpointing_kwargs={'use_reentrant': False}, 
-    load_best_model_at_end=False, 
-    # metric_for_best_model="loss",
-    # greater_is_better=False,
+    load_best_model_at_end=False,
     optim="adamw_torch", 
     warmup_ratio=0.03,
     lr_scheduler_type="cosine",
-    remove_unused_columns=False  # <--- 添加这一行
+    remove_unused_columns=False
 )
 
 trainer = CustomTrainer(
@@ -215,22 +206,3 @@ trainer.model.save_pretrained(os.path.join(OUTPUT_DIR, "final_adapter"))
 tokenizer.save_pretrained(os.path.join(OUTPUT_DIR, "final_adapter"))
 
 print("Training complete! Model saved.")
-
-
-# --- load lora ---
-# 如果你想将LoRA权重合并到原始模型中以便于推理部署，可以这样做：
-# from peft import PeftModel
-# print("Loading base model for merging...")
-# base_model = AutoModelForCausalLM.from_pretrained(
-#     MODEL_NAME,
-#     torch_dtype=torch.bfloat16, # 使用与训练时相同的精度
-#     device_map="auto"
-# )
-# print("Merging LoRA adapter...")
-# merged_model = PeftModel.from_pretrained(base_model, os.path.join(OUTPUT_DIR, "final_adapter"))
-# merged_model = merged_model.merge_and_unload()
-# print(f"Saving merged model to {OUTPUT_DIR}/merged_model...")
-# # 保存完整的模型和分词器
-# merged_model.save_pretrained(os.path.join(OUTPUT_DIR, "merged_model"))
-# tokenizer.save_pretrained(os.path.join(OUTPUT_DIR, "merged_model"))
-# print("Merged model saved!")
