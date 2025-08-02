@@ -1,14 +1,18 @@
 import torch
-from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Any, Dict, List
 
-@dataclass
 class CustomDataCollator:
-    def __call__(self, features: list[Dict[str, Any]]) -> Dict[str, Any]:
-        batch = {
-            'input_ids': torch.tensor([f['input_ids'] for f in features], dtype=torch.long),
-            'attention_mask': torch.tensor([f['attention_mask'] for f in features], dtype=torch.long),
-            'labels_full': torch.tensor([f['labels_full'] for f in features], dtype=torch.long),
-            'labels_special': torch.tensor([f['labels_special'] for f in features], dtype=torch.long),
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        input_ids = torch.stack([torch.tensor(f["input_ids"]) for f in features])
+        attention_mask = torch.stack([torch.tensor(f["attention_mask"]) for f in features])
+
+        labels_full = torch.stack([torch.tensor(f["labels_full"]) for f in features])
+        labels_special = torch.stack([torch.tensor(f["labels_special"]) for f in features])
+        
+        labels = torch.stack([labels_full, labels_special], dim=1)
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels,
         }
-        return batch

@@ -10,7 +10,7 @@ import os
 # --- config ---
 MODEL_NAME = "Qwen/Qwen3-8B"
 TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train_sft.json"
-OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/81"
+OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/82"
 
 LORA_R = 64
 LORA_ALPHA = 16
@@ -25,12 +25,15 @@ TARGET_MODULES = [
     "down_proj",
 ]
 
-NUM_TRAIN_EPOCHS = 5
+NUM_TRAIN_EPOCHS = 2
+LEARNING_RATE = 2e-5  
+SPECIAL_TOKEN_WEIGHT = 0.5
+
 PER_DEVICE_TRAIN_BATCH_SIZE = 8 
-GRADIENT_ACCUMULATION_STEPS = 4
-LEARNING_RATE = 2e-5         
+GRADIENT_ACCUMULATION_STEPS = 4       
 MAX_SEQ_LENGTH = 2048        
-SAVE_STEPS = 100             
+SAVE_STEPS = 50
+EVAL_STEPS = 10
 LOGGING_STEPS = 10          
 BF16 = True
 FP16 = False
@@ -127,9 +130,8 @@ def preprocess_function(examples):
         current_labels_full.extend([-100] * len(encoded_eos))
         
         formatted_texts.append(full_text)
-        labels_full.append(current_labels_full)
-        labels_spe.append(current_labels_spe)
-
+        labels_full.append(current_labels_full[1:] + [-100])
+        labels_spe.append(current_labels_spe[1:] + [-100])
 
     tokenized_inputs = tokenizer(
         formatted_texts,
@@ -142,14 +144,11 @@ def preprocess_function(examples):
     padded_labels_spe = []
     for label_full_seq, label_spe_seq in zip(labels_full, labels_spe):
         if len(label_full_seq) > MAX_SEQ_LENGTH:
-            padded_labels_full.append(label_full_seq[:MAX_SEQ_LENGTH])
-        else:
-            padded_labels_full.append(label_full_seq + [-100] * (MAX_SEQ_LENGTH - len(label_full_seq)))
-
-        if len(label_spe_seq) > MAX_SEQ_LENGTH:
-            padded_labels_spe.append(label_spe_seq[:MAX_SEQ_LENGTH])
-        else:
-            padded_labels_spe.append(label_spe_seq + [-100] * (MAX_SEQ_LENGTH - len(label_spe_seq)))
+            print("Warning: Label sequence longer than MAX_SEQ_LENGTH, truncating.")
+        padded_full = label_full_seq[:MAX_SEQ_LENGTH] + [-100] * (MAX_SEQ_LENGTH - len(label_full_seq))
+        padded_spe = label_spe_seq[:MAX_SEQ_LENGTH] + [-100] * (MAX_SEQ_LENGTH - len(label_spe_seq))
+        padded_labels_full.append(padded_full)
+        padded_labels_spe.append(padded_spe)
 
     tokenized_inputs["labels_full"] = padded_labels_full
     tokenized_inputs["labels_special"] = padded_labels_spe
@@ -157,9 +156,21 @@ def preprocess_function(examples):
     return tokenized_inputs
 
 
-raw_data = load_data(TRAIN_DATA_PATH)
-dataset = Dataset.from_dict({"conversation": raw_data})
-processed_dataset = dataset.map(
+raw_data = load_data(TRAIN_DATA_PATH)[:2000]
+full_dataset = Dataset.from_dict({"conversation": raw_data})
+split_dataset = full_dataset.train_test_split(test_size=0.05, seed=42)
+train_dataset = split_dataset['train']
+eval_dataset = split_dataset['test']
+print(f"Loaded {len(train_dataset)} training samples and {len(eval_dataset)} evaluation samples.")
+
+processed_train_dataset = train_dataset.map(
+    preprocess_function,
+    batched=True,
+    num_proc=os.cpu_count() if os.cpu_count() else 1,
+    remove_columns=["conversation"],
+)
+
+processed_eval_dataset = eval_dataset.map(
     preprocess_function,
     batched=True,
     num_proc=os.cpu_count() if os.cpu_count() else 1,
@@ -168,11 +179,12 @@ processed_dataset = dataset.map(
 
 # --- Trainer Config ---
 print("Setting up Trainer...")
-custom_collator = CustomDataCollator()
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
     num_train_epochs=NUM_TRAIN_EPOCHS,
     per_device_train_batch_size=PER_DEVICE_TRAIN_BATCH_SIZE,
+    per_device_eval_batch_size=2,
+    eval_accumulation_steps=4,
     gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
     learning_rate=LEARNING_RATE,
     logging_steps=LOGGING_STEPS,
@@ -180,20 +192,27 @@ training_args = TrainingArguments(
     bf16=BF16,
     gradient_checkpointing=True, 
     gradient_checkpointing_kwargs={'use_reentrant': False}, 
-    load_best_model_at_end=False,
+    eval_strategy="steps",            
+    eval_steps=EVAL_STEPS,            
+    load_best_model_at_end=True,          
+    metric_for_best_model="eval_accuracy_special",
+    greater_is_better=True,
+    save_total_limit=5,
     optim="adamw_torch", 
     warmup_ratio=0.03,
     lr_scheduler_type="cosine",
     remove_unused_columns=False
 )
 
+custom_collator = CustomDataCollator()
 trainer = CustomTrainer(
     model=model,
     args=training_args,
-    train_dataset=processed_dataset,
+    train_dataset=processed_train_dataset,
+    eval_dataset=processed_eval_dataset,
     tokenizer=tokenizer,
     data_collator=custom_collator,
-    special_token_weight=2.0
+    special_token_weight=SPECIAL_TOKEN_WEIGHT
 )
 
 # --- train ---
