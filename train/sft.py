@@ -25,7 +25,7 @@ TARGET_MODULES = [
     "down_proj",
 ]
 
-NUM_TRAIN_EPOCHS = 2
+NUM_TRAIN_EPOCHS = 5
 LEARNING_RATE = 2e-5  
 SPECIAL_TOKEN_WEIGHT = 0.5
 
@@ -199,8 +199,8 @@ training_args = TrainingArguments(
     greater_is_better=True,
     save_total_limit=5,
     optim="adamw_torch", 
-    warmup_ratio=0.03,
-    lr_scheduler_type="cosine",
+    warmup_ratio=0.1,
+    lr_scheduler_type="linear",
     remove_unused_columns=False
 )
 

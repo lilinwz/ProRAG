@@ -54,10 +54,12 @@ sft model, DPO model, PPO model(, GRPO model)
     prepare train_full.json (13k)
     changed sft.py: add special token
     write test/mulsique.py and sample/gen.py
-### 7.31 Prepare data, SFT
+### 8.1 Prepare data, SFT
     prepare train_full.json (14k) and divide it into train_sft.json (12k) and train_rl.json (2k)
     problem: missing special token in output
         rewrite sft.py and trainer: weight special token when calculating the loss
     thought: PPO / GRPO / SFT, which one is better?
         PPO / GRPO: format reward
         SFT: rewight special token
+### 8.1 SFT
+    fixed sft.py and search the best hyperparameters
