@@ -11,24 +11,24 @@ class CustomTrainer(Trainer):
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         stacked_labels = inputs.pop("labels")
-        # labels_full = stacked_labels[:, 0, :]
+        labels_full = stacked_labels[:, 0, :]
         labels_special = stacked_labels[:, 1, :]
         
         outputs = model(**inputs)
         logits = outputs.get("logits")
         
         flat_logits = logits.reshape(-1, logits.size(-1))
-        # flat_labels_full = labels_full.reshape(-1)
+        flat_labels_full = labels_full.reshape(-1)
         flat_labels_special = labels_special.reshape(-1)
 
-        # loss_full = self.loss_fct(flat_logits, flat_labels_full)
+        loss_full = self.loss_fct(flat_logits, flat_labels_full)
         loss_spe = self.loss_fct(flat_logits, flat_labels_special)
 
         if torch.isnan(loss_spe):
             loss_spe = torch.tensor(0.0, device=logits.device)
 
         total_loss = loss_spe
-        # total_loss = loss_full + (self.special_token_weight * loss_spe)
+        total_loss = loss_full + (self.special_token_weight * loss_spe)
         
         return (total_loss, outputs) if return_outputs else total_loss
     

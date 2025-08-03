@@ -10,7 +10,7 @@ import os
 # --- config ---
 MODEL_NAME = "Qwen/Qwen3-8B"
 TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train_sft.json"
-OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/82"
+OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/83"
 
 LORA_R = 64
 LORA_ALPHA = 16
@@ -26,8 +26,8 @@ TARGET_MODULES = [
 ]
 
 NUM_TRAIN_EPOCHS = 5
-LEARNING_RATE = 2e-5  
-SPECIAL_TOKEN_WEIGHT = 0.5
+LEARNING_RATE = 5e-5
+SPECIAL_TOKEN_WEIGHT = 100
 
 PER_DEVICE_TRAIN_BATCH_SIZE = 8 
 GRADIENT_ACCUMULATION_STEPS = 4       
@@ -217,7 +217,7 @@ trainer = CustomTrainer(
 
 # --- train ---
 print("Starting training...")
-trainer.train()
+trainer.train(resume_from_checkpoint=True)
 
 # --- save ---
 print(f"Saving LoRA adapter to {OUTPUT_DIR}/final_adapter...")
