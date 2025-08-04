@@ -10,10 +10,10 @@ import os
 # --- config ---
 MODEL_NAME = "Qwen/Qwen3-8B"
 TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train_sft.json"
-OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/83"
+OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/84"
 
-LORA_R = 64
-LORA_ALPHA = 16
+LORA_R = 128
+LORA_ALPHA = 128
 LORA_DROPOUT = 0.05
 TARGET_MODULES = [
     "q_proj",
@@ -25,9 +25,9 @@ TARGET_MODULES = [
     "down_proj",
 ]
 
-NUM_TRAIN_EPOCHS = 5
-LEARNING_RATE = 5e-5
-SPECIAL_TOKEN_WEIGHT = 100
+NUM_TRAIN_EPOCHS = 3
+LEARNING_RATE = 2e-5
+SPECIAL_TOKEN_WEIGHT = 10
 
 PER_DEVICE_TRAIN_BATCH_SIZE = 8 
 GRADIENT_ACCUMULATION_STEPS = 4       
@@ -114,20 +114,21 @@ def preprocess_function(examples):
             else:
                 current_labels_spe.extend([-100] * len(encoded_turn))
 
-            if (i>0 and item["assistant"][i-1] == "<retrieval>\n") or content == "<retrieval>\n":
-                current_labels_full.extend([-100] * len(encoded_turn))
-            else:
-                current_labels_full.extend(encoded_turn)
+            # if (i>0 and item["assistant"][i-1] == "<retrieval>\n") or content == "</retrieval>\n":
+            #     current_labels_full.extend([-100] * len(encoded_turn))
+            # else:
+            #     current_labels_full.extend(encoded_turn)
+            current_labels_full.extend(encoded_turn)
 
         encoded_turn = tokenizer.encode(assistant_suffix, add_special_tokens=False)
         full_text += assistant_suffix
-        current_labels_full.extend([-100] * len(encoded_turn))
-        current_labels_spe.extend([-100] * len(encoded_turn))
+        current_labels_full.extend(encoded_turn)
+        current_labels_spe.extend(encoded_turn)
 
         full_text += tokenizer.eos_token
         encoded_eos = tokenizer.encode(tokenizer.eos_token, add_special_tokens=False)
-        current_labels_spe.extend([-100] * len(encoded_eos))
-        current_labels_full.extend([-100] * len(encoded_eos))
+        current_labels_spe.extend(encoded_eos)
+        current_labels_full.extend(encoded_eos)
         
         formatted_texts.append(full_text)
         labels_full.append(current_labels_full[1:] + [-100])
@@ -147,11 +148,11 @@ def preprocess_function(examples):
             print("Warning: Label sequence longer than MAX_SEQ_LENGTH, truncating.")
         padded_full = label_full_seq[:MAX_SEQ_LENGTH] + [-100] * (MAX_SEQ_LENGTH - len(label_full_seq))
         padded_spe = label_spe_seq[:MAX_SEQ_LENGTH] + [-100] * (MAX_SEQ_LENGTH - len(label_spe_seq))
-        padded_labels_full.append(padded_full)
-        padded_labels_spe.append(padded_spe)
+        padded_labels_full.append(torch.tensor(padded_full))
+        padded_labels_spe.append(torch.tensor(padded_spe))
 
-    tokenized_inputs["labels_full"] = padded_labels_full
-    tokenized_inputs["labels_special"] = padded_labels_spe
+    tokenized_inputs["labels"] = torch.stack(padded_labels_full)
+    tokenized_inputs["labels_for_eval"] = torch.stack(padded_labels_spe)
 
     return tokenized_inputs
 
@@ -163,19 +164,8 @@ train_dataset = split_dataset['train']
 eval_dataset = split_dataset['test']
 print(f"Loaded {len(train_dataset)} training samples and {len(eval_dataset)} evaluation samples.")
 
-processed_train_dataset = train_dataset.map(
-    preprocess_function,
-    batched=True,
-    num_proc=os.cpu_count() if os.cpu_count() else 1,
-    remove_columns=["conversation"],
-)
-
-processed_eval_dataset = eval_dataset.map(
-    preprocess_function,
-    batched=True,
-    num_proc=os.cpu_count() if os.cpu_count() else 1,
-    remove_columns=["conversation"],
-)
+processed_train_dataset = train_dataset.map(preprocess_function, batched=True, remove_columns=["conversation"])
+processed_eval_dataset = eval_dataset.map(preprocess_function, batched=True, remove_columns=["conversation"])
 
 # --- Trainer Config ---
 print("Setting up Trainer...")
@@ -201,23 +191,24 @@ training_args = TrainingArguments(
     optim="adamw_torch", 
     warmup_ratio=0.1,
     lr_scheduler_type="linear",
-    remove_unused_columns=False
+    remove_unused_columns=False,
+    label_names=["labels", "labels_for_eval"]
 )
 
-custom_collator = CustomDataCollator()
+# custom_collator = CustomDataCollator()
 trainer = CustomTrainer(
     model=model,
     args=training_args,
     train_dataset=processed_train_dataset,
     eval_dataset=processed_eval_dataset,
     tokenizer=tokenizer,
-    data_collator=custom_collator,
+    # data_collator=custom_collator,
     special_token_weight=SPECIAL_TOKEN_WEIGHT
 )
 
 # --- train ---
 print("Starting training...")
-trainer.train(resume_from_checkpoint=True)
+trainer.train()
 
 # --- save ---
 print(f"Saving LoRA adapter to {OUTPUT_DIR}/final_adapter...")

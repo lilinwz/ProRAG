@@ -66,6 +66,9 @@ sft model, DPO model, PPO model(, GRPO model)
     running (2k) to learn workflow
 ### 8.2 SFT
     finding: it's difficult for model to learn workflow only by special tokens
-    tray: loss_full + 100 * loss_special 
+    try: loss_full + 100 * loss_special 
         why not 0.01 * loss_full + loss_special? 
         100 means constraint but 0.01 means learn new tasks (may lead to vanishing gradient)
+### 8.4 SFT
+    fixed trainer.py
+    try: weight = 10

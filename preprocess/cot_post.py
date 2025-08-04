@@ -27,31 +27,38 @@ for item in data:
         context = sub_item['paragraph']
         
         data_item["assistant"].append("<think>\n")
-        data_item["assistant"].append(cot1[i])
+        # data_item["assistant"].append(cot1[i])
+        data_item["assistant"].append("placeholder\n")
         data_item["assistant"].append("</think>\n")
 
         data_item["assistant"].append("<subquery>\n")
-        data_item["assistant"].append(subquery)
+        # data_item["assistant"].append(subquery)
+        data_item["assistant"].append("placeholder\n")
         data_item["assistant"].append("</subquery>\n")
 
         data_item["assistant"].append("<retrieval>\n")
-        data_item["assistant"].append(context)
+        # data_item["assistant"].append(context)
+        data_item["assistant"].append("placeholder\n")
         data_item["assistant"].append("</retrieval>\n")
 
         data_item["assistant"].append("<think>\n")
-        data_item["assistant"].append(cot2[i])
+        # data_item["assistant"].append(cot2[i])
+        data_item["assistant"].append("placeholder\n")
         data_item["assistant"].append("</think>\n")
 
         data_item["assistant"].append("<subanswer>\n")
-        data_item["assistant"].append(subanswer)
+        # data_item["assistant"].append(subanswer)
+        data_item["assistant"].append("placeholder\n")
         data_item["assistant"].append("</subanswer>\n")
 
     data_item["assistant"].append("<think>\n")
-    data_item["assistant"].append(cot3)
+    # data_item["assistant"].append(cot3)
+    data_item["assistant"].append("placeholder\n")
     data_item["assistant"].append("</think>\n")
 
     data_item["assistant"].append("<answer>\n")
-    data_item["assistant"].append(answer)
+    # data_item["assistant"].append(answer)
+    data_item["assistant"].append("placeholder\n")
     data_item["assistant"].append("</answer>\n")
 
     new_data.append(data_item)
@@ -59,12 +66,12 @@ for item in data:
 print(len(new_data))
 
 partition = 12000
-with open("/home/v-zhaowan/zhaowang/rag/data/train_sft.json", "w") as f:
+with open("/home/v-zhaowan/zhaowang/rag/data/train_sft_placeholder.json", "w") as f:
     f.write(json.dumps(new_data[:partition], ensure_ascii=False, indent=4))
-with open("/home/v-zhaowan/zhaowang/rag/data/train_rl.json", "w") as f:
+with open("/home/v-zhaowan/zhaowang/rag/data/train_rl_placeholder.json", "w") as f:
     f.write(json.dumps(new_data[partition:], ensure_ascii=False, indent=4))
 
-with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_sft.json", "w") as f:
+with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_sft_placeholder.json", "w") as f:
     f.write(json.dumps(data[:partition], ensure_ascii=False, indent=4))
-with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json", "w") as f:
+with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_rl_placeholder.json", "w") as f:
     f.write(json.dumps(data[partition:], ensure_ascii=False, indent=4))

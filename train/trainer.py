@@ -7,30 +7,29 @@ class CustomTrainer(Trainer):
     def __init__(self, *args, **kwargs):
         self.special_token_weight = kwargs.pop('special_token_weight', 1.0)
         super().__init__(*args, **kwargs)
-        self.loss_fct = CrossEntropyLoss(ignore_index=-100)
+
+        weights = torch.ones(self.model.config.vocab_size).to(self.model.device)
+        custom_tokens = [
+            "<think>", "</think>", "<subquery>", "</subquery>",
+            "<retrieval>", "</retrieval>", "<subanswer>", "</subanswer>",
+            "<answer>", "</answer>"
+        ]
+        special_token_ids = self.tokenizer.convert_tokens_to_ids(custom_tokens)
+        for token_id in special_token_ids:
+            if token_id != self.tokenizer.unk_token_id:
+                weights[token_id] = self.special_token_weight
+
+        self.loss_fct = CrossEntropyLoss(weight=weights.to(self.model.device), ignore_index=-100)
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
-        stacked_labels = inputs.pop("labels")
-        labels_full = stacked_labels[:, 0, :]
-        labels_special = stacked_labels[:, 1, :]
-        
+        labels_for_eval = inputs.pop("labels_for_eval", None)
+        labels = inputs.pop("labels")
+
         outputs = model(**inputs)
         logits = outputs.get("logits")
         
-        flat_logits = logits.reshape(-1, logits.size(-1))
-        flat_labels_full = labels_full.reshape(-1)
-        flat_labels_special = labels_special.reshape(-1)
-
-        loss_full = self.loss_fct(flat_logits, flat_labels_full)
-        loss_spe = self.loss_fct(flat_logits, flat_labels_special)
-
-        if torch.isnan(loss_spe):
-            loss_spe = torch.tensor(0.0, device=logits.device)
-
-        total_loss = loss_spe
-        total_loss = loss_full + (self.special_token_weight * loss_spe)
-        
-        return (total_loss, outputs) if return_outputs else total_loss
+        loss = self.loss_fct(logits.view(-1, self.model.config.vocab_size), labels.view(-1))
+        return (loss, outputs) if return_outputs else loss
     
     def evaluate(self, eval_dataset=None, ignore_keys=None, metric_key_prefix: str = "eval"):
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
@@ -42,11 +41,12 @@ class CustomTrainer(Trainer):
             ignore_keys=ignore_keys,
         )
 
-        metrics = output.metrics if output.metrics is not None else {}
+        metrics = {}
+        if output.metrics is not None:
+             metrics[f"{metric_key_prefix}_loss"] = output.metrics.get('eval_loss')
         
         logits = output.predictions
-        stacked_labels = output.label_ids
-        labels_special = stacked_labels[:, 1, :]
+        labels_special = np.array(eval_dataset['labels_for_eval'])
         preds = np.argmax(logits, axis=-1)
 
         structurally_complete_samples = 0
