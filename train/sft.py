@@ -1,16 +1,16 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model, PeftModel
 from datasets import Dataset
 from trainer import CustomTrainer
-from data_collator import CustomDataCollator
 import json
 import os
 
 # --- config ---
 MODEL_NAME = "Qwen/Qwen3-8B"
-TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train_sft.json"
-OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/84"
+TRAIN_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/train_sft_course1.json"
+OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/course1"
+ADAPTER_PATH = "/path/to/your/phase1/final_adapter" 
 
 LORA_R = 128
 LORA_ALPHA = 128
@@ -25,8 +25,8 @@ TARGET_MODULES = [
     "down_proj",
 ]
 
-NUM_TRAIN_EPOCHS = 3
-LEARNING_RATE = 2e-5
+NUM_TRAIN_EPOCHS = 1
+LEARNING_RATE = 1e-4
 SPECIAL_TOKEN_WEIGHT = 10
 
 PER_DEVICE_TRAIN_BATCH_SIZE = 8 
@@ -48,7 +48,7 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 custom_special_tokens = [
-    "<think>", "</think>",
+    "<step>", "</step>",
     "<subquery>", "</subquery>",
     "<retrieval>", "</retrieval>",
     "<subanswer>", "</subanswer>",
@@ -69,6 +69,14 @@ lora_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 model = get_peft_model(model, lora_config)
+
+for name, param in model.named_parameters():
+    if 'embed_tokens' in name or 'lm_head' in name:
+        param.requires_grad = True
+print("Manually un-froze embedding and lm_head layers.")
+
+# model = PeftModel.from_pretrained(model, ADAPTER_PATH)
+
 model.print_trainable_parameters()
 
 # --- data ---
@@ -184,9 +192,9 @@ training_args = TrainingArguments(
     gradient_checkpointing_kwargs={'use_reentrant': False}, 
     eval_strategy="steps",            
     eval_steps=EVAL_STEPS,            
-    load_best_model_at_end=True,          
-    metric_for_best_model="eval_accuracy_special",
-    greater_is_better=True,
+    load_best_model_at_end=True,
+    metric_for_best_model="eval_loss",
+    greater_is_better=False,
     save_total_limit=5,
     optim="adamw_torch", 
     warmup_ratio=0.1,
@@ -195,14 +203,12 @@ training_args = TrainingArguments(
     label_names=["labels", "labels_for_eval"]
 )
 
-# custom_collator = CustomDataCollator()
 trainer = CustomTrainer(
     model=model,
     args=training_args,
     train_dataset=processed_train_dataset,
     eval_dataset=processed_eval_dataset,
     tokenizer=tokenizer,
-    # data_collator=custom_collator,
     special_token_weight=SPECIAL_TOKEN_WEIGHT
 )
 

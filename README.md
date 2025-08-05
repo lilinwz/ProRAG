@@ -70,5 +70,9 @@ sft model, DPO model, PPO model(, GRPO model)
         why not 0.01 * loss_full + loss_special? 
         100 means constraint but 0.01 means learn new tasks (may lead to vanishing gradient)
 ### 8.4 SFT
-    fixed trainer.py
+    fixed cot_post.py and trainer.py
     try: weight = 10
+### 8.5 SFT
+    problem: model only predict <think> and </think>
+        reweight every special token: 2, 10, 20 (not work)
+    solved: unlock emb & head layer for special token

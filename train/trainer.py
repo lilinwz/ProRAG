@@ -2,24 +2,41 @@ import torch
 from torch.nn import CrossEntropyLoss
 from transformers import Trainer
 import numpy as np
+from collections import defaultdict
 
 class CustomTrainer(Trainer):
     def __init__(self, *args, **kwargs):
-        self.special_token_weight = kwargs.pop('special_token_weight', 1.0)
+        self.special_token_weight_config = kwargs.pop('special_token_weight', None)
         super().__init__(*args, **kwargs)
 
-        weights = torch.ones(self.model.config.vocab_size).to(self.model.device)
-        custom_tokens = [
-            "<think>", "</think>", "<subquery>", "</subquery>",
-            "<retrieval>", "</retrieval>", "<subanswer>", "</subanswer>",
-            "<answer>", "</answer>"
-        ]
-        special_token_ids = self.tokenizer.convert_tokens_to_ids(custom_tokens)
-        for token_id in special_token_ids:
-            if token_id != self.tokenizer.unk_token_id:
-                weights[token_id] = self.special_token_weight
+        default_weight = 1.0
+        self.token_weights = {
+            "<answer>": 20.0, 
+            "</answer>": 20.0,
+            "<subquery>": 10.0, 
+            "</subquery>": 10.0,
+            "<subanswer>": 10.0, 
+            "</subanswer>": 10.0,
+            "<step>": 4.0, 
+            "</step>": 4.0,
+            "<retrieval>": 10.0, 
+            "</retrieval>": 10.0,
+        }
 
-        self.loss_fct = CrossEntropyLoss(weight=weights.to(self.model.device), ignore_index=-100)
+        weights = torch.full((self.model.config.vocab_size,), default_weight).to(self.model.device)
+
+        special_token_ids = []
+        for token_str, weight in self.token_weights.items():
+            token_id = self.tokenizer.convert_tokens_to_ids(token_str)
+            if token_id != self.tokenizer.unk_token_id:
+                weights[token_id] = weight
+                special_token_ids.append(token_id)
+        
+        self.loss_fct = CrossEntropyLoss(weight=weights, ignore_index=-100)
+
+        self.special_token_map = {
+            self.tokenizer.convert_tokens_to_ids(token): token for token in self.token_weights.keys()
+        }
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         labels_for_eval = inputs.pop("labels_for_eval", None)
@@ -46,34 +63,30 @@ class CustomTrainer(Trainer):
              metrics[f"{metric_key_prefix}_loss"] = output.metrics.get('eval_loss')
         
         logits = output.predictions
-        labels_special = np.array(eval_dataset['labels_for_eval'])
+        labels = np.array(eval_dataset['labels']) 
         preds = np.argmax(logits, axis=-1)
 
-        structurally_complete_samples = 0
-        total_samples_with_special_tokens = 0
+        true_counts = defaultdict(int)
+        pred_counts = defaultdict(int)
 
-        for i in range(labels_special.shape[0]):
-            sample_labels = labels_special[i]
-            sample_preds = preds[i]
-            
-            special_token_mask = sample_labels != -100
+        for i in range(labels.shape[0]):
+            for j in range(labels.shape[1]):
+                label_token_id = labels[i, j]
+                pred_token_id = preds[i, j]
 
-            if not np.any(special_token_mask):
-                continue
-            
-            total_samples_with_special_tokens += 1
-            
-            true_tokens = sample_labels[special_token_mask]
-            pred_tokens = sample_preds[special_token_mask]
-            
-            if np.array_equal(true_tokens, pred_tokens):
-                structurally_complete_samples += 1
+                if label_token_id in self.special_token_map:
+                    true_counts[label_token_id] += 1
+                    
+                    if pred_token_id == label_token_id:
+                        pred_counts[label_token_id] += 1
         
-        structural_completion_rate = 0.0
-        if total_samples_with_special_tokens > 0:
-            structural_completion_rate = structurally_complete_samples / total_samples_with_special_tokens
+        print("\n--- Special Token Accuracy Report ---")
+        for token_id, count in sorted(true_counts.items()):
+            token_str = self.special_token_map[token_id]
+            accuracy = (pred_counts[token_id] / count) if count > 0 else 0
+            metrics[f"{metric_key_prefix}_acc_{token_str}"] = accuracy
+            print(f"Token: {token_str:<12} | Accuracy: {accuracy:>7.2%} | Count: {count}")
+        print("-------------------------------------\n")
 
-        metrics[f"{metric_key_prefix}_accuracy_special"] = structural_completion_rate
-        
         self.log(metrics)
         return metrics
