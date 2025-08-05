@@ -1,16 +1,16 @@
 #!/bin/bash
 
 MODEL_NAME="Qwen/Qwen3-8B"
-TRAIN_DATA_PATH="/home/v-zhaowan/zhaowang/rag/data/train_sft_course1.json"
-OUTPUT_DIR="/home/v-zhaowan/zhaowang/rag/save/course1"
-ADAPTER_PATH=""
+TRAIN_DATA_PATH="/home/v-zhaowan/zhaowang/rag/data/train_sft_course3.json"
+OUTPUT_DIR="/home/v-zhaowan/zhaowang/rag/save/course3"
+ADAPTER_PATH="/home/v-zhaowan/zhaowang/rag/save/course2/checkpoint-100"
 
 LORA_R=128
 LORA_ALPHA=128
 LORA_DROPOUT=0.05
 
-NUM_TRAIN_EPOCHS=1
-LEARNING_RATE=1e-4
+NUM_TRAIN_EPOCHS=2
+LEARNING_RATE=5e-5
 SPECIAL_TOKEN_WEIGHT=10
 
 PER_DEVICE_TRAIN_BATCH_SIZE=8
@@ -25,6 +25,7 @@ python train.py \
     --model_name $MODEL_NAME \
     --train_data_path $TRAIN_DATA_PATH \
     --output_dir $OUTPUT_DIR \
+    --adapter_path $ADAPTER_PATH \
     --lora_r $LORA_R \
     --lora_alpha $LORA_ALPHA \
     --lora_dropout $LORA_DROPOUT \

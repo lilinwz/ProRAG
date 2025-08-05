@@ -211,7 +211,7 @@ if __name__ == "__main__":
     parser.add_argument("--special_token_weight", type=int, default=10)
     
     parser.add_argument("--per_device_train_batch_size", type=int, default=8)
-    parser.add_arent("--gradient_accumulation_steps", type=int, default=4)
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=4)
     parser.add_argument("--max_seq_length", type=int, default=2048)
     
     parser.add_argument("--save_steps", type=int, default=50)
