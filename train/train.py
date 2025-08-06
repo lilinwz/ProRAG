@@ -132,7 +132,7 @@ def main(args):
         return tokenized_inputs
 
 
-    raw_data = load_data(args.train_data_path)[:2000]
+    raw_data = load_data(args.train_data_path)# [:2000]
     full_dataset = Dataset.from_dict({"conversation": raw_data})
     split_dataset = full_dataset.train_test_split(test_size=0.05, seed=42)
     train_dataset = split_dataset['train']

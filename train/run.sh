@@ -2,14 +2,14 @@
 
 MODEL_NAME="Qwen/Qwen3-8B"
 TRAIN_DATA_PATH="/home/v-zhaowan/zhaowang/rag/data/train_sft_course8.json"
-OUTPUT_DIR="/home/v-zhaowan/zhaowang/rag/save/course8"
-ADAPTER_PATH="/home/v-zhaowan/zhaowang/rag/save/course7/final_adapter"
+OUTPUT_DIR="/home/v-zhaowan/zhaowang/rag/save/final"
+ADAPTER_PATH="/home/v-zhaowan/zhaowang/rag/save/course8/final_adapter"
 
 LORA_R=128
 LORA_ALPHA=128
 LORA_DROPOUT=0.05
 
-NUM_TRAIN_EPOCHS=2
+NUM_TRAIN_EPOCHS=3
 LEARNING_RATE=5e-5
 SPECIAL_TOKEN_WEIGHT=10
 
