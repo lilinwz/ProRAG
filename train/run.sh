@@ -1,9 +1,9 @@
 #!/bin/bash
 
 MODEL_NAME="Qwen/Qwen3-8B"
-TRAIN_DATA_PATH="/home/v-zhaowan/zhaowang/rag/data/train_sft_course3.json"
-OUTPUT_DIR="/home/v-zhaowan/zhaowang/rag/save/course3"
-ADAPTER_PATH="/home/v-zhaowan/zhaowang/rag/save/course2/checkpoint-100"
+TRAIN_DATA_PATH="/home/v-zhaowan/zhaowang/rag/data/train_sft_course8.json"
+OUTPUT_DIR="/home/v-zhaowan/zhaowang/rag/save/course8"
+ADAPTER_PATH="/home/v-zhaowan/zhaowang/rag/save/course7/final_adapter"
 
 LORA_R=128
 LORA_ALPHA=128
@@ -19,7 +19,6 @@ MAX_SEQ_LENGTH=2048
 SAVE_STEPS=50
 EVAL_STEPS=10
 LOGGING_STEPS=10
-
 
 python train.py \
     --model_name $MODEL_NAME \

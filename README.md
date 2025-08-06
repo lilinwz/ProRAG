@@ -76,3 +76,15 @@ sft model, DPO model, PPO model(, GRPO model)
     problem: model only predict <think> and </think>
         reweight every special token: 2, 10, 20 (not work)
     solved: unlock emb & head layer for special token
+### 8.6 SFT
+    finish 8-phase Curriculum Learning 
+    Token: <step>       | Accuracy: 100.00% | Count: 538
+    Token: </step>      | Accuracy:  98.88% | Count: 538
+    Token: <subquery>   | Accuracy: 100.00% | Count: 219
+    Token: </subquery>  | Accuracy: 100.00% | Count: 219
+    Token: <retrieval>  | Accuracy: 100.00% | Count: 219
+    Token: </retrieval> | Accuracy:  98.17% | Count: 219
+    Token: <subanswer>  | Accuracy: 100.00% | Count: 219
+    Token: </subanswer> | Accuracy: 100.00% | Count: 219
+    Token: <answer>     | Accuracy: 100.00% | Count: 100
+    Token: </answer>    | Accuracy: 100.00% | Count: 100
