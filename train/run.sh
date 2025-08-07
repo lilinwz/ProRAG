@@ -1,7 +1,7 @@
 #!/bin/bash
 
 MODEL_NAME="Qwen/Qwen3-8B"
-TRAIN_DATA_PATH="/home/v-zhaowan/zhaowang/rag/data/train_sft_course8.json"
+TRAIN_DATA_PATH="/home/v-zhaowan/zhaowang/rag/data/train_sft.json"
 OUTPUT_DIR="/home/v-zhaowan/zhaowang/rag/save/final"
 ADAPTER_PATH="/home/v-zhaowan/zhaowang/rag/save/course8/final_adapter"
 

@@ -91,6 +91,6 @@ with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json", "w") as f:
     f.write(json.dumps(new_data[partition1:], ensure_ascii=False, indent=4))
 
 random.shuffle(new_data)
-partition2 = 2000
-with open("/home/v-zhaowan/zhaowang/rag/data/train_sft_course8.json", "w") as f:
+partition2 = 10000
+with open("/home/v-zhaowan/zhaowang/rag/data/train_sft.json", "w") as f:
     f.write(json.dumps(new_data[:partition2], ensure_ascii=False, indent=4))
