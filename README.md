@@ -90,3 +90,5 @@ sft model, DPO model, PPO model(, GRPO model)
     Token: </answer>    | Accuracy: 100.00% | Count: 100
 ### 8.7 SFT
     finish final SFT
+### 8.12 test
+    test the sft model

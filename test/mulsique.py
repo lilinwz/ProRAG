@@ -7,8 +7,8 @@ from tqdm import tqdm
 import numpy as np
 from collections import Counter
 
-LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/84/checkpoint-100"
-TEST_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
+LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/final/final_adapter"
+TEST_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_dev.jsonl"
 MAX_MODEL_INPUT_LENGTH = 2048
 MAX_GENERATION_LENGTH = 512
 MAX_HOP = 5
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     custom_special_tokens = [
-        "<think>", "</think>",
+        "<step>", "</step>",
         "<subquery>", "</subquery>",
         "<retrieval>", "</retrieval>",
         "<subanswer>", "</subanswer>",
