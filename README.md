@@ -92,3 +92,8 @@ sft model, DPO model, PPO model(, GRPO model)
     finish final SFT
 ### 8.12 test
     test the sft model
+### 8.14 reSFT
+    reSFT
+### 8.15 reTest and BrainStorm
+    retest the sft model
+    brainstorm: LLM-enhanced / MCTS-based and DPO / GRPO

@@ -1,7 +1,7 @@
 import json
 import random
 
-with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_full4.json", 'r', encoding='utf-8') as f:
+with open("/home/v-zhaowan/zhaowang/rag/data/raw/train_full.json", 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 new_data = []
@@ -43,7 +43,7 @@ for item in data:
         ans += 1
         continue
 
-    data_item = {"user": query, "assistant": []}
+    data_item = {"id": idx, "user": query, "assistant": []}
     info = ""
     for i, sub_item in enumerate(chain):
         subquery = sub_item['subquery']
