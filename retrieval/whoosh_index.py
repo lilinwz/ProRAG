@@ -5,19 +5,20 @@ from whoosh.index import create_in, open_dir
 from whoosh.fields import Schema, TEXT, ID
 from tqdm import tqdm
 
-INDEX_DIR = "/home/v-zhaowan/zhaowang/rag/wiki"
-COMMIT_BATCH_SIZE = 10000
+INDEX_DIR = "/home/v-zhaowan/zhaowang/rag/retrieval/bm25"
+COMMIT_BATCH_SIZE = 100000
 
 ds = load_dataset("wikimedia/wikipedia", "20231101.en")
 print(ds)
 
-schema = Schema(title=TEXT(stored=True), path=ID(stored=True), content=TEXT)
+schema = Schema(title=TEXT(stored=True), path=ID(stored=True), content=TEXT(stored=True))
 if os.path.exists(INDEX_DIR):
     shutil.rmtree(INDEX_DIR)
 os.makedirs(INDEX_DIR, exist_ok=True) 
 
 ix = create_in(INDEX_DIR, schema)
-writer = ix.writer()
+writer_args = {'limitmb': 2048, 'procs': 8, 'multisegment': True}
+writer = ix.writer(**writer_args)
 doc_count = 0
 total_docs_in_train = len(ds["train"])
 print(f"indexing wiki corpus ({total_docs_in_train} in total)")

@@ -7,16 +7,18 @@ from rank_bm25 import BM25Okapi
 from tqdm import tqdm
 import numpy as np
 import math
+import collections
+from typing import List
 
 LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/final/final_adapter"
 RAW_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
 DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json"
-OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/sampled_data_mcts_real_nli.json"
+OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/sampled_data_mcts.json"
 
-NUM_SIMULATIONS = 200
+NUM_SIMULATIONS = 50
 EXPANSION_WIDTH_K = 5
 MAX_SEARCH_DEPTH = 6
-C_PUCT = 1.8
+C_PUCT = 4.0
 LENGTH_PENALTY = 0.1
 
 MAX_MODEL_INPUT_LENGTH = 2048
@@ -25,7 +27,8 @@ MAX_GENERATION_LENGTH = 512
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print("Loading SentenceTransformer model...")
-similarity_model = SentenceTransformer('all-MiniLM-L6-v2', device=DEVICE)
+E5_MODEL_NAME = 'intfloat/e5-large-v2'
+similarity_model = SentenceTransformer(E5_MODEL_NAME, device=DEVICE)
 
 print("Loading NLI model for answerability scoring...")
 NLI_MODEL_NAME = 'facebook/bart-large-mnli'
@@ -56,28 +59,43 @@ class StopOnKeywords(StoppingCriteria):
             return True
         return False
 
-class SimpleBM25Retriever:
-    def __init__(self, paragraphs):
+class E5VectorRetriever:
+    def __init__(self, paragraphs: List[dict], model: SentenceTransformer):
         self.raw_paragraphs = paragraphs
-        self.corpus = [p["paragraph_text"] for p in paragraphs]
+        self.model = model
+        
+        self.corpus = [f'passage: {p.get("paragraph_text", "")}' for p in paragraphs]
         if not self.corpus:
-            self.bm25 = None
+            self.corpus_embeddings = None
             return
-        self.tokenized_corpus = [doc.split(" ") for doc in self.corpus]
-        self.bm25 = BM25Okapi(self.tokenized_corpus)
 
-    def retrieve(self, query, top_k=3):
-        if not self.bm25:
+        self.corpus_embeddings = self.model.encode(
+            self.corpus, 
+            convert_to_tensor=True, 
+            show_progress_bar=False
+        ).to(DEVICE)
+
+    def retrieve(self, query: str, top_k: int = 3) -> List[str]:
+        if self.corpus_embeddings is None or not query:
             return []
-        tokenized_query = query.split(" ")
-        doc_scores = self.bm25.get_scores(tokenized_query)
-        top_indices = np.argsort(doc_scores)[::-1][:top_k]
+
+        query_with_prefix = f'query: {query}'
+        query_embedding = self.model.encode(query_with_prefix, convert_to_tensor=True).to(DEVICE)
+        
+        query_embedding = torch.nn.functional.normalize(query_embedding, p=2, dim=0)
+        corpus_embeddings_norm = torch.nn.functional.normalize(self.corpus_embeddings, p=2, dim=1)
+        
+        cos_scores = torch.mm(query_embedding.unsqueeze(0), corpus_embeddings_norm.transpose(0, 1))[0]
+        top_results = torch.topk(cos_scores, k=min(top_k, len(self.corpus)))
+
         retrieved_docs_with_info = []
-        for i in top_indices:
+        for score, idx in zip(top_results[0], top_results[1]):
+            paragraph = self.raw_paragraphs[idx]
             retrieved_docs_with_info.append(
-                f"Document {self.raw_paragraphs[i]['idx']} (Title: {self.raw_paragraphs[i]['title']}): "
-                f"{self.raw_paragraphs[i]['paragraph_text']}"
+                f"Document {paragraph['idx']} (Title: {paragraph['title']}): "
+                f"{paragraph['paragraph_text']}"
             )
+        
         return retrieved_docs_with_info
 
 def generate(model, tokenizer, prompt, do_sample=True, max_gen_len=MAX_GENERATION_LENGTH):
@@ -99,6 +117,25 @@ def generate(model, tokenizer, prompt, do_sample=True, max_gen_len=MAX_GENERATIO
         )
     response = tokenizer.decode(gen_output_ids[0, input_ids.shape[1]:], skip_special_tokens=False)
     return response
+
+def calculate_f1_score(prediction: str, ground_truth: str) -> float:
+    prediction_tokens = prediction.lower().split()
+    ground_truth_tokens = ground_truth.lower().split()
+    
+    if not prediction_tokens or not ground_truth_tokens:
+        return 0.0
+
+    common = collections.Counter(prediction_tokens) & collections.Counter(ground_truth_tokens)
+    num_same = sum(common.values())
+
+    if num_same == 0:
+        return 0.0
+
+    precision = 1.0 * num_same / len(prediction_tokens)
+    recall = 1.0 * num_same / len(ground_truth_tokens)
+    f1 = (2 * precision * recall) / (precision + recall)
+    
+    return f1
 
 class Node:
     def __init__(self, state, parent=None, action=None, prior=0.0, depth=0):
@@ -132,7 +169,6 @@ class Node:
             node.N += 1
             node.Q += reward
             node = node.parent
-
 
 class MCTS:
     def __init__(self, model, tokenizer, retriever, initial_prompt, question, final_answer):
@@ -170,27 +206,31 @@ class MCTS:
             generated_text = generate(self.model, self.tokenizer, node.state, do_sample=True)
             actions.append(generated_text)
         
-        for action in set(actions):
-            prior_score = self._heuristic_function(action, node.state, self.question)
-            
+        subqueries = {}
+        for action in actions:
+            subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)            
+            subquery = subquery_match.group(1).strip() if subquery_match else action
+            if subquery not in subqueries:
+                subqueries[subquery] = action
+
+        for subquery, action in subqueries.items():
+            prior_score = self._heuristic_function(subquery, node.state, self.question)
             next_state = node.state + action
             if action.strip().endswith("<retrieval>"):
-                subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)
-                if subquery_match:
-                    subquery = subquery_match.group(1).strip()
-                    retrieved_docs = self.retriever.retrieve(subquery, top_k=3)
-                    retrieved_docs_text = "\n".join(retrieved_docs)
-                    next_state += f"\n{retrieved_docs_text}\n</retrieval>\n"
+                retrieved_docs = self.retriever.retrieve(subquery, top_k=3)
+                retrieved_docs_text = "\n".join(retrieved_docs)
+                next_state += f"\n{retrieved_docs_text}\n</retrieval>\n"
 
             child = Node(state=next_state, parent=node, action=action, prior=prior_score, depth=node.depth + 1)
             node.children.append(child)
+
         return node.children
 
     def _simulate(self, node):
         current_state = node.state
         depth = node.depth
         while not self._is_terminal(current_state) and depth < MAX_SEARCH_DEPTH:
-            response = generate(self.model, self.tokenizer, current_state, do_sample=False, max_gen_len=256)
+            response = generate(self.model, self.tokenizer, current_state, do_sample=False, max_gen_len=512)
             current_state += response
             
             if response.strip().endswith("<retrieval>"):
@@ -204,87 +244,72 @@ class MCTS:
         
         return self._compute_terminal_reward(current_state)
     
-    def _heuristic_function(self, action, prev_state, question):
+    def _heuristic_function(self, subquery, prev_state, question):
         try:
             with torch.no_grad():
-                action_embedding = similarity_model.encode(action, convert_to_tensor=True)
-                question_embedding = similarity_model.encode(question, convert_to_tensor=True)
-                score_rel = util.pytorch_cos_sim(action_embedding, question_embedding).item()
+                subquery_embedding = similarity_model.encode(f'query: {subquery}', convert_to_tensor=True)
+                question_embedding = similarity_model.encode(f'query: {question}', convert_to_tensor=True)
+                score_rel = util.pytorch_cos_sim(subquery_embedding, question_embedding).item()
 
-                prev_action_match = re.findall(r"<step>.*?</step>", prev_state, re.DOTALL)
-                prev_action = prev_action_match[-1] if prev_action_match else ""
+                prev_subquery_match = re.findall(r"<subquery>(.*?)</subquery>", prev_state, re.DOTALL)
+                prev_subquery = prev_subquery_match[-1].strip() if prev_subquery_match else ""
                 
-                if prev_action:
-                    prev_action_embedding = similarity_model.encode(prev_action, convert_to_tensor=True)
-                    score_red = util.pytorch_cos_sim(action_embedding, prev_action_embedding).item()
+                if prev_subquery:
+                    prev_subquery_embedding = similarity_model.encode(f'query: {prev_subquery}', convert_to_tensor=True)
+                    score_red = util.pytorch_cos_sim(subquery_embedding, prev_subquery_embedding).item()
                 else:
                     score_red = 0.0
 
-            subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)
-            if subquery_match:
-                subquery = subquery_match.group(1).strip()
-                retrieved_docs = self.retriever.retrieve(subquery, top_k=1)
-                context = "\n".join(retrieved_docs)
-                # <<< MODIFIED: 调用真实的NLI评分函数 >>>
-                score_ans = get_nli_score(premise=context, hypothesis=subquery)
-            else:
-                score_ans = 0.3
+            retrieved_docs = self.retriever.retrieve(subquery, top_k=3)
+            context = "\n".join(retrieved_docs)
+            score_ans = get_nli_score(premise=context, hypothesis=subquery)
             
-            w_g, w_p_rel, w_p_red = 1.2, 1.0, 0.8
-            final_score = (w_g * score_ans) + (w_p_rel * score_rel) - (w_p_red * score_red)
+            final_score = score_ans * score_rel * (1.0 - score_red + 1e-3)
             
-            return 1 / (1 + math.exp(-final_score))
+            return final_score
         except Exception as e:
             print(f"Error in heuristic function: {e}")
             return 0.5
+
     def _is_terminal(self, state):
-        return "<|im_end|>" in state
+        return state.strip().endswith("<|im_end|>")
 
     def _compute_terminal_reward(self, state):
         answer_match = re.search(r"<answer>(.*?)</answer>", state, re.DOTALL)
+        f1_score = 0.0
+
         if answer_match:
-            extracted_answer = answer_match.group(1).strip().lower()
-            if self.final_answer.lower() in extracted_answer or extracted_answer in self.final_answer.lower():
-                is_correct = 1.0
-            else:
-                is_correct = 0.0
+            extracted_answer = answer_match.group(1).strip()
+            if extracted_answer and self.final_answer:
+                scores = [calculate_f1_score(extracted_answer, ans) for ans in self.final_answer if ans]
+                if scores:
+                    f1_score = max(scores)
+
+        if f1_score >= 0.9:
+            return f1_score
         else:
-            is_correct = 0.0
+            length = state.count("<step>")
+            final_reward = f1_score - LENGTH_PENALTY * length
+            if f1_score < 0.1 and length >= MAX_SEARCH_DEPTH:
+                return -0.5
+            return max(-1.0, final_reward)
 
-        length = state.count("<step>")
-        length_penalty = LENGTH_PENALTY * length
+    def _node_to_dict(self, node: Node) -> dict:
+        if node is None:
+            return None
         
-        if is_correct == 0.0 and length >= MAX_SEARCH_DEPTH:
-            return -0.5
-            
-        return is_correct - length_penalty
+        node_representation = {
+            'action': node.action,
+            'q': node.Q,
+            'n': node.N,
+            'prior': node.prior,
+            'depth': node.depth,
+            'children': [self._node_to_dict(child) for child in node.children]
+        }
+        return node_representation
 
-    def get_best_samples(self, num_samples=3):
-        paths = []
-        def dfs(node):
-            if self._is_terminal(node.state) or node.depth >= MAX_SEARCH_DEPTH:
-                if node.N > 0:
-                    paths.append({
-                        "path": node.state,
-                        "avg_q": node.Q / node.N,
-                        "visits": node.N
-                    })
-                return
-
-            for child in node.children:
-                dfs(child)
-
-        dfs(self.root)
-        if not paths:
-            return []
-            
-        sorted_paths = sorted(paths, key=lambda x: x['avg_q'], reverse=True)
-        return [p['path'] for p in sorted_paths[:num_samples]]
-
-
-# ==========================================================
-# 4. 主执行逻辑
-# ==========================================================
+    def get_search_tree(self) -> dict:
+        return self._node_to_dict(self.root)
 
 if __name__ == "__main__":
     print("Loading generator model and tokenizer...")
@@ -293,10 +318,10 @@ if __name__ == "__main__":
     custom_special_tokens = ["<step>", "</step>", "<subquery>", "</subquery>", "<retrieval>", "</retrieval>", "<subanswer>", "</subanswer>", "<answer>", "</answer>"]
     tokenizer.add_special_tokens({"additional_special_tokens": custom_special_tokens})
     base_model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
+    base_model.resize_token_embeddings(len(tokenizer))
     from peft import PeftModel
     model = PeftModel.from_pretrained(base_model, LORA_PATH)
     model = model.merge_and_unload()
-    model.resize_token_embeddings(len(tokenizer))
     model.eval()
 
     print("Loading and preparing data...")
@@ -307,13 +332,13 @@ if __name__ == "__main__":
             raw_data.append(item)
 
     with open(DATA_PATH, 'r', encoding='utf-8') as f:
-        data = json.load(f)[:2000]
+        data = json.load(f)[:1]
 
     try:
         with open(OUTPUT_PATH, 'r', encoding='utf-8') as f:
             new_data = json.load(f)
         print(f"Resuming from {len(new_data)} saved samples.")
-    except (FileNotFoundError, json.JSONDecodeError):
+    except:
         new_data = []
         print("Starting a new sampling process.")
     
@@ -330,23 +355,23 @@ if __name__ == "__main__":
             continue
 
         question = item["question"]
-        final_answer = item.get("answer", "")
+        final_answer = [item.get("answer", "")]
+        final_answer.extend(item.get("answer_aliases", []))
         if not final_answer:
             print(f"Warning: No answer for ID {idx}. Skipping.")
             continue
         
         init_prompt = f"<|im_start|>user\n{question}<|im_end|>\n<|im_start|>assistant\n<step>\n"
-
-        retriever = SimpleBM25Retriever(item["paragraphs"])
+        retriever = E5VectorRetriever(item["paragraphs"], similarity_model)
 
         mcts = MCTS(model, tokenizer, retriever, init_prompt, question, final_answer)
         mcts.run()
-        sample_list = mcts.get_best_samples(num_samples=EXPANSION_WIDTH_K)
+        search_tree = mcts.get_search_tree()
     
         new_data.append({
             "id": idx,
             "question": question,
-            "samples": sample_list,
+            "mcts_tree": search_tree,
             "answer": final_answer
         })
 

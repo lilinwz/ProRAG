@@ -171,6 +171,7 @@ if __name__ == "__main__":
         test_samples = [json.loads(line) for line in f]
     print(f"Loaded {len(test_samples)} test samples.")
 
+    all_em_scores = []
     all_f1_scores = []
     for i, sample in tqdm(enumerate(test_samples), total=len(test_samples), desc="Running RAG inference"):
         question = sample["question"]
@@ -182,7 +183,9 @@ if __name__ == "__main__":
 
         predicted_answer, subquery, retrieved_context, generated_text = run_rag_inference(model, tokenizer, question, retriever)
         
+        em = (1.0 if predicted_answer in golden_answer else 0.0)
         f1 = calculate_f1(predicted_answer, golden_answer)
+        all_em_scores.append(em)
         all_f1_scores.append(f1)
 
         if i < 5:
@@ -194,8 +197,17 @@ if __name__ == "__main__":
             print(f"Predicted Answer: {predicted_answer}")
             print(f"Golden Answer: {golden_answer}")
             print(f"Is Answerable (Dataset): {sample['answerable']}")
+            print(f"EM Score: {em:.4f}")
             print(f"F1 Score: {f1:.4f}")
             print("-" * 30)
+
+    if all_em_scores:
+        average_em = np.mean(all_em_scores)
+        print(f"\n--- Overall RAG Performance ---")
+        print(f"Total Samples Evaluated: {len(all_em_scores)}")
+        print(f"Average EM Score: {average_em:.4f}")
+    else:
+        print("\nNo EM scores calculated. Check your data and model output.")
 
     if all_f1_scores:
         average_f1 = np.mean(all_f1_scores)
