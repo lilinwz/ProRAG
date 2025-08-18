@@ -97,3 +97,9 @@ sft model, DPO model, PPO model(, GRPO model)
 ### 8.15 reTest and BrainStorm
     retest the sft model
     brainstorm: LLM-enhanced / MCTS-based and DPO / GRPO
+### 8.16 discussion
+    discuss with ziliang
+### 8.17 retrieval
+    rewrite retrieval method: need too much time
+### 8.18 sample
+    write mcts.py and debug

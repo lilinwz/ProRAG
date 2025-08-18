@@ -15,10 +15,11 @@ RAW_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_tra
 DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json"
 OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/sampled_data_mcts.json"
 
+DATA_LENGTH = 1000
 NUM_SIMULATIONS = 50
 EXPANSION_WIDTH_K = 5
 MAX_SEARCH_DEPTH = 6
-C_PUCT = 4.0
+C_PUCT = 2.0
 LENGTH_PENALTY = 0.1
 
 MAX_MODEL_INPUT_LENGTH = 2048
@@ -134,7 +135,6 @@ def calculate_f1_score(prediction: str, ground_truth: str) -> float:
     precision = 1.0 * num_same / len(prediction_tokens)
     recall = 1.0 * num_same / len(ground_truth_tokens)
     f1 = (2 * precision * recall) / (precision + recall)
-    
     return f1
 
 class Node:
@@ -206,14 +206,10 @@ class MCTS:
             generated_text = generate(self.model, self.tokenizer, node.state, do_sample=True)
             actions.append(generated_text)
         
-        subqueries = {}
         for action in actions:
             subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)            
             subquery = subquery_match.group(1).strip() if subquery_match else action
-            if subquery not in subqueries:
-                subqueries[subquery] = action
-
-        for subquery, action in subqueries.items():
+            
             prior_score = self._heuristic_function(subquery, node.state, self.question)
             next_state = node.state + action
             if action.strip().endswith("<retrieval>"):
@@ -264,7 +260,7 @@ class MCTS:
             context = "\n".join(retrieved_docs)
             score_ans = get_nli_score(premise=context, hypothesis=subquery)
             
-            final_score = score_ans * score_rel * (1.0 - score_red + 1e-3)
+            final_score = score_ans * 0.5 + max(0, score_rel - score_red) * 0.5
             
             return final_score
         except Exception as e:
@@ -332,7 +328,7 @@ if __name__ == "__main__":
             raw_data.append(item)
 
     with open(DATA_PATH, 'r', encoding='utf-8') as f:
-        data = json.load(f)[:1]
+        data = json.load(f)[:DATA_LENGTH]
 
     try:
         with open(OUTPUT_PATH, 'r', encoding='utf-8') as f:
