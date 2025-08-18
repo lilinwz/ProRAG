@@ -205,11 +205,15 @@ class MCTS:
         for _ in range(EXPANSION_WIDTH_K):
             generated_text = generate(self.model, self.tokenizer, node.state, do_sample=True)
             actions.append(generated_text)
-        
+
+        subqueries = {}
         for action in actions:
             subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)            
             subquery = subquery_match.group(1).strip() if subquery_match else action
-            
+            if subquery not in subqueries:
+                subqueries[subquery] = action
+
+        for subquery, action in subqueries.items():
             prior_score = self._heuristic_function(subquery, node.state, self.question)
             next_state = node.state + action
             if action.strip().endswith("<retrieval>"):
