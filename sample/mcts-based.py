@@ -13,13 +13,14 @@ from typing import List
 LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/final/final_adapter"
 RAW_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
 DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json"
-OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/sampled_data_mcts.json"
+OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/data_mcts_1500.json"
 
-DATA_LENGTH = 1000
+DATA_START = 1000
+DATA_LENGTH = 500
 NUM_SIMULATIONS = 50
 EXPANSION_WIDTH_K = 5
 MAX_SEARCH_DEPTH = 6
-C_PUCT = 2.0
+C_PUCT = 2.5
 LENGTH_PENALTY = 0.1
 
 MAX_MODEL_INPUT_LENGTH = 2048
@@ -206,23 +207,34 @@ class MCTS:
             generated_text = generate(self.model, self.tokenizer, node.state, do_sample=True)
             actions.append(generated_text)
 
-        subqueries = {}
+        key_actions = {}
         for action in actions:
-            subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)            
-            subquery = subquery_match.group(1).strip() if subquery_match else action
-            if subquery not in subqueries:
-                subqueries[subquery] = action
+            answer_match = re.search(r"<answer>(.*?)</answer>", action, re.DOTALL)
+            if answer_match:
+                key = answer_match.group(1).strip()
+            else:
+                subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)            
+                key = subquery_match.group(1).strip() if subquery_match else action
+            if key not in key_actions:
+                key_actions[key] = action
 
-        for subquery, action in subqueries.items():
-            prior_score = self._heuristic_function(subquery, node.state, self.question)
-            next_state = node.state + action
-            if action.strip().endswith("<retrieval>"):
-                retrieved_docs = self.retriever.retrieve(subquery, top_k=3)
-                retrieved_docs_text = "\n".join(retrieved_docs)
-                next_state += f"\n{retrieved_docs_text}\n</retrieval>\n"
-
-            child = Node(state=next_state, parent=node, action=action, prior=prior_score, depth=node.depth + 1)
-            node.children.append(child)
+        for key, action in key_actions.items():
+            subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL) 
+            answer_match = re.search(r"<answer>(.*?)</answer>", action, re.DOTALL)
+            if not subquery_match and answer_match:
+                next_state = node.state + action
+                prior_score = 0.5
+                child = Node(state=next_state, parent=node, action=action, prior=prior_score, depth=node.depth + 1)
+                node.children.append(child)
+            else:
+                prior_score = self._heuristic_function(key, node.state, self.question)
+                next_state = node.state + action
+                if subquery_match and action.strip().endswith("<retrieval>"):
+                    retrieved_docs = self.retriever.retrieve(key, top_k=3)
+                    retrieved_docs_text = "\n".join(retrieved_docs)
+                    next_state += f"\n{retrieved_docs_text}\n</retrieval>\n"
+                child = Node(state=next_state, parent=node, action=action, prior=prior_score, depth=node.depth + 1)
+                node.children.append(child)
 
         return node.children
 
@@ -332,7 +344,7 @@ if __name__ == "__main__":
             raw_data.append(item)
 
     with open(DATA_PATH, 'r', encoding='utf-8') as f:
-        data = json.load(f)[:DATA_LENGTH]
+        data = json.load(f)[DATA_START: DATA_START+DATA_LENGTH]
 
     try:
         with open(OUTPUT_PATH, 'r', encoding='utf-8') as f:
