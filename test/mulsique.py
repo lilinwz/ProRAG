@@ -13,6 +13,10 @@ MAX_MODEL_INPUT_LENGTH = 2048
 MAX_GENERATION_LENGTH = 512
 MAX_HOP = 5
 
+print("Loading SentenceTransformer model...")
+E5_MODEL_NAME = 'intfloat/e5-large-v2'
+similarity_model = SentenceTransformer(E5_MODEL_NAME, device=DEVICE)
+
 class StopOnKeywords(StoppingCriteria):
     def __init__(self, tokenizer, stop_tokens):
         self.tokenizer = tokenizer
@@ -27,23 +31,43 @@ class StopOnKeywords(StoppingCriteria):
             return True
         return False
 
-class SimpleBM25Retriever:
-    def __init__(self, paragraphs):
+class E5VectorRetriever:
+    def __init__(self, paragraphs: List[dict], model: SentenceTransformer):
         self.raw_paragraphs = paragraphs
-        self.corpus = [p["paragraph_text"] for p in paragraphs]
-        self.tokenized_corpus = [doc.split(" ") for doc in self.corpus]
-        self.bm25 = BM25Okapi(self.tokenized_corpus)
+        self.model = model
+        
+        self.corpus = [f'passage: {p.get("paragraph_text", "")}' for p in paragraphs]
+        if not self.corpus:
+            self.corpus_embeddings = None
+            return
 
-    def retrieve(self, query, top_k=3):
-        tokenized_query = query.split(" ")
-        doc_scores = self.bm25.get_scores(tokenized_query)
-        top_indices = np.argsort(doc_scores)[::-1][:top_k]
+        self.corpus_embeddings = self.model.encode(
+            self.corpus, 
+            convert_to_tensor=True, 
+            show_progress_bar=False
+        ).to(DEVICE)
+
+    def retrieve(self, query: str, top_k: int = 3) -> List[str]:
+        if self.corpus_embeddings is None or not query:
+            return []
+
+        query_with_prefix = f'query: {query}'
+        query_embedding = self.model.encode(query_with_prefix, convert_to_tensor=True).to(DEVICE)
+        
+        query_embedding = torch.nn.functional.normalize(query_embedding, p=2, dim=0)
+        corpus_embeddings_norm = torch.nn.functional.normalize(self.corpus_embeddings, p=2, dim=1)
+        
+        cos_scores = torch.mm(query_embedding.unsqueeze(0), corpus_embeddings_norm.transpose(0, 1))[0]
+        top_results = torch.topk(cos_scores, k=min(top_k, len(self.corpus)))
+
         retrieved_docs_with_info = []
-        for i in top_indices:
+        for score, idx in zip(top_results[0], top_results[1]):
+            paragraph = self.raw_paragraphs[idx]
             retrieved_docs_with_info.append(
-                f"Document {self.raw_paragraphs[i]['idx']} (Title: {self.raw_paragraphs[i]['title']}): "
-                f"{self.raw_paragraphs[i]['paragraph_text']}"
+                f"Document {paragraph['idx']} (Title: {paragraph['title']}): "
+                f"{paragraph['paragraph_text']}"
             )
+        
         return retrieved_docs_with_info
 
 def generate(model, tokenizer, prompt, max_input_len=MAX_MODEL_INPUT_LENGTH, max_gen_len=MAX_GENERATION_LENGTH):
@@ -179,7 +203,7 @@ if __name__ == "__main__":
         golden_answer.extend(sample["answer_aliases"])
         
         all_paragraphs_for_retrieval = sample["paragraphs"] 
-        retriever = SimpleBM25Retriever(all_paragraphs_for_retrieval)
+        retriever = E5VectorRetriever(item["paragraphs"], similarity_model)
 
         predicted_answer, subquery, retrieved_context, generated_text = run_rag_inference(model, tokenizer, question, retriever)
         

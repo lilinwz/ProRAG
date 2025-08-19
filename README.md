@@ -103,3 +103,7 @@ sft model, DPO model, PPO model(, GRPO model)
     rewrite retrieval method: need too much time
 ### 8.18 sample
     write mcts.py and debug
+### 8.19 sample
+    begin hg-mcts
+    rewrite retrieval (e5) in test
+    consider baseline (R1-Searcher++, search-r1, ReasonRAG, search-o1)
