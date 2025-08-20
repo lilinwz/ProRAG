@@ -10,7 +10,7 @@ import math
 import collections
 from typing import List
 
-LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/final/final_adapter"
+LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/final_course/final_adapter"
 RAW_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
 DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json"
 OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/data_mcts_1500.json"
