@@ -110,3 +110,5 @@ sft model, DPO model, PPO model(, GRPO model)
 ### 8.19 sample
     continue hg-mcts
     write rm.py and grpo.py
+### 8.22 sample
+    finish hg-mcts (1.5k in total)
