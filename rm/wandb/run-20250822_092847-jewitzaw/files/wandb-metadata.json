@@ -1,0 +1,40 @@
+{
+  "os": "Linux-6.8.0-1031-azure-x86_64-with-glibc2.35",
+  "python": "CPython 3.10.18",
+  "startedAt": "2025-08-22T09:28:47.729304Z",
+  "program": "/home/v-zhaowan/zhaowang/rag/rm/train.py",
+  "codePath": "rm/train.py",
+  "codePathLocal": "train.py",
+  "git": {
+    "remote": "https://github.com/lilinwz/dpo-rag.git",
+    "commit": "b97a77d7f1520e883210d74d862081166ca71d0a"
+  },
+  "email": "lilin22wz@gmail.com",
+  "root": "/home/v-zhaowan/zhaowang/rag/rm",
+  "host": "GCRAZGDL1627",
+  "executable": "/home/v-zhaowan/miniconda3/envs/rag/bin/python",
+  "cpu_count": 24,
+  "cpu_count_logical": 24,
+  "gpu": "NVIDIA A100 80GB PCIe",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "1065418129408",
+      "used": "675607937024"
+    }
+  },
+  "memory": {
+    "total": "232209727488"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA A100 80GB PCIe",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-7dc5a7c4-fc5a-688e-fac3-6ef2c3587d64"
+    }
+  ],
+  "cudaVersion": "12.9",
+  "writerId": "f4hyb14tc4kcv9lsozhetoeywj82g9ru"
+}

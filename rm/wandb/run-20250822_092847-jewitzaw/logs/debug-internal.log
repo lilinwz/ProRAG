@@ -1,0 +1,6 @@
+{"time":"2025-08-22T09:28:47.941654887Z","level":"INFO","msg":"stream: starting","core version":"0.21.1"}
+{"time":"2025-08-22T09:28:48.114209609Z","level":"INFO","msg":"stream: created new stream","id":"jewitzaw"}
+{"time":"2025-08-22T09:28:48.114249504Z","level":"INFO","msg":"stream: started","id":"jewitzaw"}
+{"time":"2025-08-22T09:28:48.114283617Z","level":"INFO","msg":"writer: started","stream_id":"jewitzaw"}
+{"time":"2025-08-22T09:28:48.114374527Z","level":"INFO","msg":"handler: started","stream_id":"jewitzaw"}
+{"time":"2025-08-22T09:28:48.114395846Z","level":"INFO","msg":"sender: started","stream_id":"jewitzaw"}

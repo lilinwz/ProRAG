@@ -2,8 +2,9 @@ import json
 import torch
 from tqdm import tqdm
 from typing import List, Dict
-
-from datasets import Dataset, load_metric
+from datasets import Dataset
+import evaluate
+import os
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from transformers import (
     AutoTokenizer,
@@ -13,14 +14,15 @@ from transformers import (
     DataCollatorWithPadding
 )
 
-MCTS_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/sample/data_mcts_1500.json"
+MCTS_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/rm/data.json"
 MODEL_NAME = "Qwen/Qwen3-4B"
 OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/rm/v1"
 
-NUM_EPOCHS = 3
+NUM_EPOCHS = 5
 BATCH_SIZE = 4
 LEARNING_RATE = 2e-5
 MAX_LENGTH = 2048
+os.environ["WANDB_PROJECT"] = "RAG-MCTS"
 
 def create_reward_samples(mcts_data_path: str) -> List[Dict]:
     print(f"Loading MCTS data from {mcts_data_path}...")
@@ -30,8 +32,9 @@ def create_reward_samples(mcts_data_path: str) -> List[Dict]:
     samples = []
     
     def traverse_and_reconstruct(node: Dict, parent_state: str):
-        current_state = parent_state + node.get('action', "")
-        if node and node.get('n', 0) > 0 and node.get('action'):
+        action_value = node.get('action') or ""
+        current_state = parent_state + action_value
+        if node and node.get('n', 0) > 0 and len(action_value)>0:
             q = node.get('q', 0.0)
             n = node.get('n')
             target_value = q / n
@@ -113,15 +116,16 @@ if __name__ == "__main__":
         weight_decay=0.01,
         warmup_ratio=0.1,
         logging_dir=f"{OUTPUT_DIR}/logs",
-        logging_steps=50,
-        evaluation_strategy="steps",
-        eval_steps=200,
+        logging_steps=10,
+        eval_strategy="steps",
+        eval_steps=20,
         save_strategy="steps",
-        save_steps=200,
+        save_steps=20,
         load_best_model_at_end=True,
         metric_for_best_model="mse",
         greater_is_better=False,
-        report_to="tensorboard",
+        report_to="wandb",
+        run_name=f"rm-v1",
         fp16=False, 
         bf16=True,
     )
@@ -144,3 +148,4 @@ if __name__ == "__main__":
     print("Training finished. Saving the best model...")
     trainer.save_model(f"{OUTPUT_DIR}/best_model")
     print(f"Model saved to {OUTPUT_DIR}/best_model")
+    wandb.finish()
