@@ -2,3 +2,5 @@ wiki/
 data/
 save/
 retrieval/bm25/
+rm/wandb
+ppo/wandb
