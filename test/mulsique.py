@@ -6,12 +6,15 @@ from rank_bm25 import BM25Okapi
 from tqdm import tqdm
 import numpy as np
 from collections import Counter
+from sentence_transformers import SentenceTransformer, util
 
-LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/final/final_adapter"
+LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/sft/final_course/final_adapter"
 TEST_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_dev.jsonl"
 MAX_MODEL_INPUT_LENGTH = 2048
 MAX_GENERATION_LENGTH = 512
-MAX_HOP = 5
+MAX_HOP = 6
+
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print("Loading SentenceTransformer model...")
 E5_MODEL_NAME = 'intfloat/e5-large-v2'
@@ -32,7 +35,7 @@ class StopOnKeywords(StoppingCriteria):
         return False
 
 class E5VectorRetriever:
-    def __init__(self, paragraphs: List[dict], model: SentenceTransformer):
+    def __init__(self, paragraphs, model):
         self.raw_paragraphs = paragraphs
         self.model = model
         
@@ -47,7 +50,7 @@ class E5VectorRetriever:
             show_progress_bar=False
         ).to(DEVICE)
 
-    def retrieve(self, query: str, top_k: int = 3) -> List[str]:
+    def retrieve(self, query, top_k):
         if self.corpus_embeddings is None or not query:
             return []
 
@@ -203,7 +206,7 @@ if __name__ == "__main__":
         golden_answer.extend(sample["answer_aliases"])
         
         all_paragraphs_for_retrieval = sample["paragraphs"] 
-        retriever = E5VectorRetriever(item["paragraphs"], similarity_model)
+        retriever = E5VectorRetriever(all_paragraphs_for_retrieval, similarity_model)
 
         predicted_answer, subquery, retrieved_context, generated_text = run_rag_inference(model, tokenizer, question, retriever)
         

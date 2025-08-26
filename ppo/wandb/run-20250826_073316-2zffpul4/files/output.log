@@ -1,0 +1,17 @@
+/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/trl/trainer/ppo_trainer.py:273: UserWarning: No dataset is provided. Make sure to set config.batch_size to the correct value before training.
+  warnings.warn(
+--- Epoch 1/1 ---
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1000/1000 [00:00<00:00, 680893.51it/s]
+Training finished. Saving the final PPO model (LoRA weights)...
+Traceback (most recent call last):
+  File "/home/v-zhaowan/zhaowang/rag/ppo/train.py", line 261, in <module>
+    unwrapped_model.save_pretrained(PPO_OUTPUT_DIR)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/trl/models/modeling_base.py", line 558, in save_pretrained
+    torch.save(state_dict, save_path)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/serialization.py", line 966, in save
+    with _open_zipfile_writer(f) as opened_zipfile:
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/serialization.py", line 828, in _open_zipfile_writer
+    return container(name_or_buffer)  # type: ignore[arg-type]
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/serialization.py", line 792, in __init__
+    torch._C.PyTorchFileWriter(
+RuntimeError: Parent directory /home/v-zhaowan/zhaowang/rag/save/ppo/v1 does not exist.

@@ -1,0 +1,13 @@
+/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/trl/trainer/ppo_trainer.py:273: UserWarning: No dataset is provided. Make sure to set config.batch_size to the correct value before training.
+  warnings.warn(
+--- Epoch 1/1 ---
+  0%|                                                                                                                                    | 0/1000 [00:00<?, ?it/s]You're using a Qwen2TokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
+  0%|                                                                                                                                    | 0/1000 [00:21<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/v-zhaowan/zhaowang/rag/ppo/train.py", line 254, in <module>
+    stats = ppo_trainer.step(final_query_tensors, final_response_tensors, final_rewards)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/contextlib.py", line 79, in inner
+    return func(*args, **kwds)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/trl/trainer/ppo_trainer.py", line 683, in step
+    scores = torch.tensor(scores, device=self.current_device)
+ValueError: only one element tensors can be converted to Python scalars

@@ -107,9 +107,11 @@ sft model, DPO model, PPO model(, GRPO model)
     begin hg-mcts
     rewrite retrieval (e5) in test
     consider baseline (R1-Searcher++, search-r1, ReasonRAG, search-o1)
-### 8.19 sample
+### 8.20-21 sample
     continue hg-mcts
     write rm.py and grpo.py
 ### 8.22 sample
     finish hg-mcts (1.5k in total)
     start training rm
+### 8.23-25 training
+    continue training rm

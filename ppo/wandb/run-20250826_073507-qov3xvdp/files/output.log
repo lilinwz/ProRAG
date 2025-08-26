@@ -1,0 +1,21 @@
+/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/trl/trainer/ppo_trainer.py:273: UserWarning: No dataset is provided. Make sure to set config.batch_size to the correct value before training.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/home/v-zhaowan/zhaowang/rag/ppo/train.py", line 177, in <module>
+    reward_model.to(device)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/transformers/modeling_utils.py", line 4346, in to
+    return super().to(*args, **kwargs)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1369, in to
+    return self._apply(convert)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 928, in _apply
+    module._apply(fn)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 928, in _apply
+    module._apply(fn)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 928, in _apply
+    module._apply(fn)
+  [Previous line repeated 2 more times]
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 955, in _apply
+    param_applied = fn(param)
+  File "/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1355, in convert
+    return t.to(
+KeyboardInterrupt
