@@ -25,50 +25,44 @@ from trl.core import masked_mean, masked_whiten
 
 # 定义一个在官方代码中使用的常量
 INVALID_LOGPROB = 1.0
+MAX_INTERACTION_STEPS = 7
 
-# --- 辅助类和函数 (保持不变) ---
-# ... (此处省略 StopOnKeywords, E5VectorRetriever, calculate_f1_score, RAGEnv 的代码)
 class StopOnKeywords(StoppingCriteria):
-    def __init__(self, tokenizer, stop_tokens: List[str]):
-        super().__init__()
+    def __init__(self, tokenizer, stop_tokens):
         self.tokenizer = tokenizer
         self.stop_token_ids = []
         for token in stop_tokens:
             ids = tokenizer.encode(token, add_special_tokens=False)
             if ids:
-                self.stop_token_ids.extend(ids)
+                self.stop_token_ids.append(ids[0])
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        if input_ids.shape[-1] > 0:
-            for stop_id in self.stop_token_ids:
-                if input_ids[0, -1].item() == stop_id:
-                    return True
+        if input_ids.shape[-1] > 0 and input_ids[0, -1].item() in self.stop_token_ids:
+            return True
         return False
 
 class E5VectorRetriever:
-    def __init__(self, paragraphs: List[dict], model: SentenceTransformer, device):
-        self.model = model
-        self.device = device
+    def __init__(self, paragraphs: List[dict], model: SentenceTransformer):
         self.raw_paragraphs = paragraphs
+        self.model = model
         self.corpus = [f'passage: {p.get("paragraph_text", "")}' for p in paragraphs]
         if not self.corpus: self.corpus_embeddings = None; return
-        self.corpus_embeddings = self.model.encode(self.corpus, convert_to_tensor=True, show_progress_bar=False, device=self.device)
-        self.corpus_embeddings = torch.nn.functional.normalize(self.corpus_embeddings, p=2, dim=1)
-
+        self.corpus_embeddings = self.model.encode(self.corpus, convert_to_tensor=True, show_progress_bar=False)
     def retrieve(self, query: str, top_k: int = 3) -> List[str]:
         if self.corpus_embeddings is None or not query: return []
         query_with_prefix = f'query: {query}'
-        query_embedding = self.model.encode(query_with_prefix, convert_to_tensor=True, device=self.device)
+        query_embedding = self.model.encode(query_with_prefix, convert_to_tensor=True)
         query_embedding = torch.nn.functional.normalize(query_embedding, p=2, dim=0)
-        cos_scores = torch.mm(query_embedding.unsqueeze(0), self.corpus_embeddings.transpose(0, 1))[0]
+        corpus_embeddings_norm = torch.nn.functional.normalize(self.corpus_embeddings, p=2, dim=1)
+        cos_scores = torch.mm(query_embedding.unsqueeze(0), corpus_embeddings_norm.transpose(0, 1))[0]
         top_results = torch.topk(cos_scores, k=min(top_k, len(self.corpus)))
         retrieved_docs_with_info = []
         for score, idx in zip(top_results[0], top_results[1]):
-            paragraph = self.raw_paragraphs[idx.item()]
-            retrieved_docs_with_info.append(f"Document {paragraph.get('idx', '')} (Title: {paragraph.get('title', '')}): {paragraph.get('paragraph_text', '')}")
+            paragraph = self.raw_paragraphs[idx]
+            retrieved_docs_with_info.append(f"Document {paragraph['idx']} (Title: {paragraph['title']}): {paragraph['paragraph_text']}")
         return retrieved_docs_with_info
 
-def calculate_f1_score(prediction: str, ground_truth_list: List[str]) -> float:
+def calculate_f1_score(prediction: str, ground_truth_list: list) -> float:
     prediction_tokens = prediction.lower().split()
     best_f1 = 0.0
     for ground_truth in ground_truth_list:
@@ -81,101 +75,128 @@ def calculate_f1_score(prediction: str, ground_truth_list: List[str]) -> float:
         recall = 1.0 * num_same / len(ground_truth_tokens)
         f1 = (2 * precision * recall) / (precision + recall)
         if f1 > best_f1: best_f1 = f1
-    return f1
+    return best_f1
+
 
 class RAGEnv:
-    def __init__(self, data_item: dict, retriever: E5VectorRetriever):
-        self.question = data_item["question"]
-        self.final_answer_list = [data_item.get("answer", "")] + data_item.get("answer_aliases", [])
-        self.retriever = retriever
-        self.state_text = f"<|im_start|>user\n{self.question}<|im_end|>\n<|im_start|>assistant\n"
+    def __init__(self, raw_data_item: dict, similarity_model: SentenceTransformer):
+        self.question = raw_data_item["question"]
+        self.final_answer_list = [raw_data_item.get("answer", "")] + raw_data_item.get("answer_aliases", [])
+        self.retriever = E5VectorRetriever(raw_data_item["paragraphs"], similarity_model)
+        
+        self.state = f"<|im_start|>user\n{self.question}<|im_end|>\n<|im_start|>assistant\n"
         self.steps = 0
         self.is_done = False
-        self.max_steps = 7
 
-    def step(self, response_text: str) -> Tuple[str, bool]:
+    def step(self, response_text: str) -> tuple[str, bool]:
         self.steps += 1
-        self.state_text += response_text
-        if self.state_text.strip().endswith("<retrieval>"):
+        self.state += response_text
+        
+        if self.state.strip().endswith("<retrieval>"):
             subquery_match = re.search(r"<subquery>(.*?)</subquery>", response_text, re.DOTALL)
             if subquery_match:
                 subquery = subquery_match.group(1).strip()
                 retrieved_docs = self.retriever.retrieve(subquery, top_k=3)
                 retrieved_docs_text = "\n".join(retrieved_docs)
-                self.state_text += f"\n{retrieved_docs_text}\n</retrieval>\n"
-        if (self.state_text.strip().endswith("<|im_end|>") and "<answer>" in response_text) or self.steps >= self.max_steps:
+                self.state += f"\n{retrieved_docs_text}\n</retrieval>\n"
+        
+        if (self.state.strip().endswith("<|im_end|>") and "<answer>" in response_text) or self.steps >= MAX_INTERACTION_STEPS:
             self.is_done = True
-        return self.state_text, self.is_done
-# --- 主训练器类 ---
+            
+        return self.state, self.is_done
 
 class RAGPPOTrainer(PPOTrainer):
     def __init__(self, *args, **kwargs):
         self.reward_tokenizer = kwargs.pop('reward_tokenizer')
         self.retrieval_model = kwargs.pop('retrieval_model')
         super().__init__(*args, **kwargs)
-
+        self.model = self.policy_model
+        if hasattr(self, 'ref_model') and self.ref_model is not None:
+            if self.ref_model is not self.policy_model:
+                del self.ref_model
+                gc.collect()
+                torch.cuda.empty_cache()
+            
     def train(self):
-        # --- 1. 初始化 (大部分从官方PPOTrainer.train复制) ---
         args = self.args
         accelerator = self.accelerator
+        optimizer = self.optimizer
+        tokenizer = self.processing_class
+        model = self.model
+        rm_tokenizer = self.reward_tokenizer
+        reward_model = self.reward_model
+        retrieval_model = self.retrieval_model
+        dataloader = self.dataloader
         device = accelerator.device
+        
         iter_dataloader = iter(self.dataloader)
         
-        # trainer state initialization
-        # ... (这部分与官方代码一致)
+
         self.state.global_step = 0
         self.state.episode = 0
         self.state.max_steps = args.num_total_batches
+
         self.control = self.callback_handler.on_train_begin(args, self.state, self.control)
 
-        # --- 2. 主训练循环 ---
-        for update in tqdm(range(1, args.num_total_batches + 1), desc="PPO Steps"):
+        for update in range(1, args.num_total_batches + 1):
             self.state.episode += args.batch_size
-            
-            # === Rollout 阶段 (这是我们自定义的部分) ===
+            data = next(iter_dataloader)
+            print("="*50)
+            print(f"--- Starting Update Step {update} ---")
+            torch.cuda.empty_cache()
+            gc.collect()
+            print(f"Memory after models loaded (before rollout): {torch.cuda.memory_allocated(device) / 1e9:.2f} GB")
             with torch.no_grad():
-                # 2.1. 通过多步交互生成轨迹
-                batch = next(iter_dataloader)
-                
-                envs = [RAGEnv(
-                    {key: batch[key][i] for key in batch},
-                    E5VectorRetriever(batch["paragraphs"][i], self.retrieval_model, self.accelerator.device)
-                ) for i in range(args.local_batch_size)]
+                envs = [RAGEnv({key: data[key][i] for key in data}, retrieval_model) for i in range(args.local_batch_size)]
 
                 all_step_responses = [[] for _ in envs]
                 all_step_rewards = [[] for _ in envs]
-                query_tensors = [self.tokenizer.encode(env.state_text, return_tensors="pt").to(device)[0] for env in envs]
+                query_tensors = [tokenizer.encode(env.state, return_tensors="pt").to(device)[0] for env in envs]
 
-                with unwrap_model_for_generation(self.model, self.accelerator) as unwrapped_model:
-                    # ... (这部分多步批量生成逻辑保持不变)
+                with unwrap_model_for_generation(self.policy_model, self.accelerator) as unwrapped_model:
                     for _ in range(7):
                         active_envs_indices = [i for i, env in enumerate(envs) if not env.is_done]
-                        if not active_envs_indices: break
+                        if not active_envs_indices: 
+                            break
 
                         active_query_tensors = [query_tensors[i] for i in active_envs_indices]
-                        padded_queries = self.tokenizer.pad({"input_ids": active_query_tensors}, padding=True, return_tensors="pt").to(device)
+                        padded_queries = tokenizer.pad({"input_ids": active_query_tensors}, padding=True, return_tensors="pt").to(device)
                         
-                        gen_config = GenerationConfig(max_new_tokens=128, pad_token_id=self.tokenizer.pad_token_id, do_sample=True, temperature=0.9, top_k=50, stopping_criteria=StoppingCriteriaList([StopOnKeywords(self.tokenizer, ["<retrieval>", "<|im_end|>"])]))
-                        response_outputs = unwrapped_model.generate(**padded_queries, generation_config=gen_config)
+                        gen_config = GenerationConfig(
+                            max_new_tokens=128, 
+                            pad_token_id=tokenizer.pad_token_id, 
+                            do_sample=True, 
+                            temperature=0.9, 
+                            top_k=50
+                        )
+                        response_outputs = unwrapped_model.generate(
+                            **padded_queries, 
+                            generation_config=gen_config, 
+                            stopping_criteria=StoppingCriteriaList([StopOnKeywords(tokenizer, ["<retrieval>", "<|im_end|>"])])
+                        )
 
                         for i, env_idx in enumerate(active_envs_indices):
                             env = envs[env_idx]
-                            query_len = padded_queries['input_ids'][i].ne(self.tokenizer.pad_token_id).sum()
+                            query_len = padded_queries['input_ids'][i].ne(tokenizer.pad_token_id).sum()
                             response_tensor = response_outputs[i][query_len:]
-                            response_text = self.tokenizer.decode(response_tensor, skip_special_tokens=True)
-                            reward = self.reward_model(self.reward_tokenizer([env.state_text + response_text], return_tensors='pt', padding=True, truncation=True).to(device))[0].logits[0]
+                            response_text = tokenizer.decode(response_tensor, skip_special_tokens=True)
+
+                            rm_inputs = rm_tokenizer([env.state + response_text], return_tensors='pt', padding=True, truncation=True).to(device)
+                            reward = reward_model(**rm_inputs).logits[0]
+                            
                             new_state_text, _ = env.step(response_text)
-                            query_tensors[env_idx] = self.tokenizer.encode(new_state_text, return_tensors="pt").to(device)[0]
+                            query_tensors[env_idx] = tokenizer.encode(new_state_text, return_tensors="pt").to(device)[0]
+
                             all_step_responses[env_idx].append(response_tensor)
                             all_step_rewards[env_idx].append(reward)
                 
-                # 2.2. 整理轨迹数据 (queries, responses, rewards)
                 queries, responses, rewards_list = [], [], []
                 for k in range(len(envs)):
-                    if not all_step_responses[k]: continue
+                    if not all_step_responses[k]: 
+                        continue
                     
                     initial_query_text = f"<|im_start|>user\n{envs[k].question}<|im_end|>\n<|im_start|>assistant\n"
-                    queries.append(self.tokenizer.encode(initial_query_text, return_tensors="pt").to(device)[0])
+                    queries.append(tokenizer.encode(initial_query_text, return_tensors="pt").to(device)[0])
                     
                     full_response = torch.cat(all_step_responses[k])
                     responses.append(full_response)
@@ -188,34 +209,26 @@ class RAGPPOTrainer(PPOTrainer):
                             rewards[current_idx + step_len - 1] = all_step_rewards[k][i]
                             current_idx += step_len
                     
-                    final_match = re.search(r"<answer>(.*?)</answer>", envs[k].state_text, re.DOTALL)
+                    final_match = re.search(r"<answer>(.*?)</answer>", envs[k].state, re.DOTALL)
                     rewards[-1] = 5.0 * calculate_f1_score(final_match.group(1).strip(), envs[k].final_answer_list) if final_match else -2.0
                     rewards_list.append(rewards)
 
-                # 2.3. 将数据 padding 成矩形张量
                 max_len = max(len(r) for r in responses)
-                responses = torch.stack([pad_to_length(r, max_len, self.tokenizer.pad_token_id) for r in responses])
-                queries = self.tokenizer.pad({"input_ids": queries}, padding=True, return_tensors="pt")["input_ids"]
+                responses = torch.stack([pad_to_length(r, max_len, tokenizer.pad_token_id) for r in responses])
+                queries = tokenizer.pad({"input_ids": queries}, padding=True, return_tensors="pt")["input_ids"].to(device)
                 rewards = torch.stack([pad_to_length(rw, max_len, 0) for rw in rewards_list])
                 
-                # 2.4. 计算 logprobs, ref_logprobs, values (复制自官方代码)
                 query_responses = torch.cat((queries, responses), dim=1)
                 context_length = queries.shape[1]
 
-                # Policy model forward pass
-                output, vpred_temp = forward(self.model, query_responses, self.tokenizer.pad_token_id)
-                logits = output.logits[:, context_length - 1 : -1]
-                logprobs = selective_log_softmax(logits, responses)
+                all_forward_outputs = forward(self.model, query_responses, tokenizer.pad_token_id)
+                logits, vpred_temp = all_forward_outputs[0], all_forward_outputs[2]
+                logprobs = selective_log_softmax(logits[:, context_length - 1 : -1], responses)
                 values = vpred_temp[:, context_length - 1 : -1].squeeze(-1)
                 
-                # Ref model forward pass
-                with self.null_ref_context():
-                    ref_output, _ = forward(self.model, query_responses, self.tokenizer.pad_token_id)
-                ref_logits = ref_output.logits[:, context_length - 1 : -1]
-                ref_logprobs = selective_log_softmax(ref_logits, responses)
+                ref_logprobs = logprobs.detach()
 
-                # 2.5. 计算最终奖励和优势 (复制自官方代码)
-                sequence_lengths = first_true_indices((responses == self.tokenizer.pad_token_id)) - 1
+                sequence_lengths = first_true_indices((responses == tokenizer.pad_token_id)) - 1
                 padding_mask = torch.arange(responses.shape[1], device=device)[None, :] > sequence_lengths[:, None]
                 
                 logprobs = torch.masked_fill(logprobs, padding_mask, INVALID_LOGPROB)
@@ -236,7 +249,6 @@ class RAGPPOTrainer(PPOTrainer):
                 returns = advantages + values
                 advantages = masked_whiten(advantages, ~padding_mask)
 
-            # === 优化阶段 (从官方PPOTrainer.train原封不动地复制) ===
             for ppo_epoch_idx in range(args.num_ppo_epochs):
                 b_inds = np.random.permutation(args.local_batch_size)
                 for mini_batch_start in range(0, args.local_batch_size, args.local_mini_batch_size):
@@ -244,21 +256,17 @@ class RAGPPOTrainer(PPOTrainer):
                     mini_batch_inds = b_inds[mini_batch_start:mini_batch_end]
                     
                     with accelerator.accumulate(self.model):
-                        # ... 此处是完整的 PPO 损失计算和优化步骤 ...
-                        # (直接从您贴出的 PPOTrainer 源码中复制 'for ppo_epoch_idx' 循环内部的所有内容)
                         mb_advantage = advantages[mini_batch_inds]
                         mb_responses = responses[mini_batch_inds]
                         mb_query_responses = query_responses[mini_batch_inds]
                         mb_logprobs = logprobs[mini_batch_inds]
                         mb_return = returns[mini_batch_inds]
 
-                        output, vpred_temp = forward(self.model, mb_query_responses, self.tokenizer.pad_token_id)
+                        output, vpred_temp = forward(self.model, mb_query_responses, tokenizer.pad_token_id)
                         logits = output.logits[:, context_length - 1 : -1]
                         new_logprobs = selective_log_softmax(logits, mb_responses)
                         vpred = vpred_temp[:, context_length - 1 : -1].squeeze(-1)
                         
-                        # ... (省略vf_loss, pg_loss, loss = ..., accelerator.backward(loss)等计算)
-                        # ... 这些都从官方代码复制 ...
                         logprobs_diff = new_logprobs - mb_logprobs
                         ratio = torch.exp(logprobs_diff)
                         pg_losses = -mb_advantage * ratio
@@ -276,7 +284,6 @@ class RAGPPOTrainer(PPOTrainer):
                         self.optimizer.step()
                         self.optimizer.zero_grad()
             
-            # --- 日志和收尾 (从官方代码复制) ---
             self.lr_scheduler.step()
             self.log({"ppo/loss": loss.item(), "ppo/pg_loss": pg_loss.item(), "ppo/vf_loss": vf_loss.item()})
             # ... (其他日志)

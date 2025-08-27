@@ -20,9 +20,16 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.environ["WANDB_PROJECT"] = "RAG-MCTS"
 
 MAX_PPO_EPOCHS = 4
-BATCH_SIZE = 4
+BATCH_SIZE = 1
 MINI_BATCH_SIZE = 1
 LEARNING_RATE = 1.41e-5
+
+def simple_data_collator(features):
+    first = features[0]
+    batch = {}
+    for k in first:
+        batch[k] = [f[k] for f in features]
+    return batch
 
 if __name__ == "__main__":
     print("Loading and preparing data...")
@@ -62,6 +69,8 @@ if __name__ == "__main__":
         trust_remote_code=True, 
         peft_config=lora_config
     )
+    policy_model.gradient_checkpointing_enable()
+    policy_model.generation_config = policy_model.pretrained_model.generation_config
     
     reward_model = AutoModelForSequenceClassification.from_pretrained(
         REWARD_MODEL_PATH, 
@@ -80,15 +89,18 @@ if __name__ == "__main__":
         num_ppo_epochs=MAX_PPO_EPOCHS,
         remove_unused_columns=False,
         report_to="wandb",
-        run_name=f"ppo-test"
+        run_name="ppo-test"
     )
 
     trainer = RAGPPOTrainer(
         args=config, 
-        policy_model=policy_model, 
+        model=policy_model, 
+        processing_class=tokenizer,
+        data_collator=simple_data_collator,
+        ref_model=None,
         reward_model=reward_model,
         train_dataset=train_dataset,
-        tokenizer=tokenizer, 
+        value_model=policy_model.pretrained_model,
         reward_tokenizer=rm_tokenizer, 
         retrieval_model=similarity_model
     )
