@@ -115,3 +115,5 @@ sft model, DPO model, PPO model(, GRPO model)
     start training rm
 ### 8.23-25 training
     continue training rm
+### 8.26-29 training
+    rewrite ppo (final use trl)

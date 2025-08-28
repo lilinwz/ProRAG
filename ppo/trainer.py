@@ -128,19 +128,15 @@ class RAGPPOTrainer(PPOTrainer):
         retrieval_model = self.retrieval_model
         dataloader = self.dataloader
         device = accelerator.device
-        
-        iter_dataloader = iter(self.dataloader)
-        
 
         self.state.global_step = 0
         self.state.episode = 0
         self.state.max_steps = args.num_total_batches
 
         self.control = self.callback_handler.on_train_begin(args, self.state, self.control)
-
-        for update in range(1, args.num_total_batches + 1):
+        print(f"Length of the dataloader INSIDE the trainer: {len(dataloader)}")
+        for update, data in enumerate(dataloader, 1):
             self.state.episode += args.batch_size
-            data = next(iter_dataloader)
             print("="*50)
             print(f"--- Starting Update Step {update} ---")
             torch.cuda.empty_cache()
@@ -262,9 +258,15 @@ class RAGPPOTrainer(PPOTrainer):
                         mb_logprobs = logprobs[mini_batch_inds]
                         mb_return = returns[mini_batch_inds]
 
-                        output, vpred_temp = forward(self.model, mb_query_responses, tokenizer.pad_token_id)
-                        logits = output.logits[:, context_length - 1 : -1]
-                        new_logprobs = selective_log_softmax(logits, mb_responses)
+                        # final_sequence_length = mb_query_responses.shape[1]
+                        # print(f"!!!!!!!! [Process {accelerator.process_index}] PRE-FORWARD CHECK: Final sequence length is {final_sequence_length} tokens. !!!!!!!!!!")
+                        # print(f"--- [Process {accelerator.process_index}] Detailed Memory Summary BEFORE forward: ---")
+                        # print(torch.cuda.memory_summary(device=accelerator.device))
+                        # print(f"---------------------------------------------------------------------------------")
+
+                        all_forward_outputs = forward(self.model, mb_query_responses, tokenizer.pad_token_id)
+                        logits, vpred_temp = all_forward_outputs[0], all_forward_outputs[2]
+                        new_logprobs = selective_log_softmax(logits[:, context_length - 1 : -1], mb_responses)
                         vpred = vpred_temp[:, context_length - 1 : -1].squeeze(-1)
                         
                         logprobs_diff = new_logprobs - mb_logprobs
@@ -285,7 +287,14 @@ class RAGPPOTrainer(PPOTrainer):
                         self.optimizer.zero_grad()
             
             self.lr_scheduler.step()
+            self.state.global_step += 1
             self.log({"ppo/loss": loss.item(), "ppo/pg_loss": pg_loss.item(), "ppo/vf_loss": vf_loss.item()})
-            # ... (其他日志)
+            del advantages, returns, query_responses, queries, responses, rewards_list, rewards
+            del all_forward_outputs, logits, vpred_temp, logprobs, values, ref_logprobs
+            del kl, non_score_reward, mb_advantage, mb_responses, mb_query_responses
+            del mb_logprobs, mb_return, new_logprobs, vpred, logprobs_diff, ratio
+            del pg_losses, pg_losses2, pg_loss, vpredclipped, vf_losses1, vf_losses2, vf_loss, loss
+            gc.collect()
+            torch.cuda.empty_cache()
 
         print("PPO training finished.")

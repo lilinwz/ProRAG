@@ -9,15 +9,19 @@ from trl import AutoModelForCausalLMWithValueHead, PPOConfig
 import os
 
 RAW_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
-DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json"
+DATA_PATH = "/home/v-zhaowan/zhaowang/data/rag-dpo/raw/train_rl.json"
 POLICY_MODEL_NAME = "/home/v-zhaowan/zhaowang/data/rag-dpo/model/sft"
-REWARD_MODEL_PATH = "/home/v-zhaowan/zhaowang/rag/save/rm/v1/best_model"
+REWARD_MODEL_PATH = "/home/v-zhaowan/zhaowang/data/rag-dpo/model/rm"
 E5_MODEL_NAME = 'intfloat/e5-large-v2'
 
 OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/ppo/v1"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.environ["WANDB_PROJECT"] = "RAG-MCTS"
+
+EPOCHS = 1.0
+PER_DEVICE_TRAIN_BATCH_SIZE=4
+GRADIENT_ACCUMULATION_STEPS=2
 
 MAX_PPO_EPOCHS = 4
 BATCH_SIZE = 1
@@ -46,11 +50,19 @@ if __name__ == "__main__":
     train_dataset = Dataset.from_list(data) 
 
     print("Loading model...")
-    tokenizer = AutoTokenizer.from_pretrained(POLICY_MODEL_NAME, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        POLICY_MODEL_NAME,
+        trust_remote_code=True,
+        padding_side='left'
+    )
     if tokenizer.pad_token is None: 
         tokenizer.pad_token = tokenizer.eos_token
 
-    rm_tokenizer = AutoTokenizer.from_pretrained(REWARD_MODEL_PATH, trust_remote_code=True)
+    rm_tokenizer = AutoTokenizer.from_pretrained(
+        REWARD_MODEL_PATH, 
+        trust_remote_code=True,
+        padding_side='left'
+    )
     if rm_tokenizer.pad_token is None: 
         rm_tokenizer.pad_token = rm_tokenizer.eos_token
     
@@ -67,9 +79,9 @@ if __name__ == "__main__":
         POLICY_MODEL_NAME, 
         torch_dtype=torch.bfloat16, 
         trust_remote_code=True, 
-        peft_config=lora_config
+        peft_config=lora_config,
+        attn_implementation="flash_attention_2"
     )
-    policy_model.gradient_checkpointing_enable()
     policy_model.generation_config = policy_model.pretrained_model.generation_config
     
     reward_model = AutoModelForSequenceClassification.from_pretrained(
@@ -84,12 +96,16 @@ if __name__ == "__main__":
 
     config = PPOConfig(
         learning_rate=LEARNING_RATE,
+        num_train_epochs=EPOCHS,
+        per_device_train_batch_size=PER_DEVICE_TRAIN_BATCH_SIZE,
+        gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
         batch_size=BATCH_SIZE,
         mini_batch_size=MINI_BATCH_SIZE,
         num_ppo_epochs=MAX_PPO_EPOCHS,
         remove_unused_columns=False,
+        output_dir=OUTPUT_DIR,
         report_to="wandb",
-        run_name="ppo-test"
+        exp_name="ppo-test"
     )
 
     trainer = RAGPPOTrainer(
