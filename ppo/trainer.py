@@ -150,7 +150,7 @@ class RAGPPOTrainer(PPOTrainer):
             else:
                 self.state.save_steps = args.save_steps
         self.control = self.callback_handler.on_train_begin(args, self.state, self.control)
-        print(f"Length of the dataloader INSIDE the trainer: {len(dataloader)}")
+        
         for update, data in enumerate(dataloader, 1):
             self.state.episode += args.batch_size
             # print("="*50)
@@ -204,6 +204,10 @@ class RAGPPOTrainer(PPOTrainer):
                             all_step_responses[env_idx].append(response_tensor)
                             all_step_rewards[env_idx].append(reward)
                 
+                del query_tensors, unwrapped_model, padded_queries, response_outputs
+                gc.collect()
+                torch.cuda.empty_cache()
+
                 # --- 2. Post-processing and Reward Calculation ---
                 queries, responses, rewards_list = [], [], []
                 for k in range(len(envs)):
@@ -269,6 +273,10 @@ class RAGPPOTrainer(PPOTrainer):
                 returns = advantages + values
                 advantages = masked_whiten(advantages, ~padding_mask)
 
+                del all_forward_outputs, logits, vpred_temp, ref_logprobs, non_score_reward, delta
+                gc.collect()
+                torch.cuda.empty_cache()
+
             # --- 5. PPO Optimization Phase ---
             for ppo_epoch_idx in range(args.num_ppo_epochs):
                 b_inds = np.random.permutation(args.local_batch_size)
@@ -310,6 +318,10 @@ class RAGPPOTrainer(PPOTrainer):
                         accelerator.backward(loss)
                         self.optimizer.step()
                         self.optimizer.zero_grad()
+
+                        del all_forward_outputs, logits, vpred_temp, new_logprobs, vpred, logprobs_diff, ratio
+                        del pg_losses, pg_losses2, vpredclipped, vf_losses1, vf_losses2, loss
+                        del mb_advantage, mb_responses, mb_query_responses, mb_logprobs, mb_return, mb_values, mb_mask
             
             # --- 6. Logging and Cleanup ---
             self.lr_scheduler.step()
@@ -332,10 +344,7 @@ class RAGPPOTrainer(PPOTrainer):
             self.log(metrics)
 
             del advantages, returns, query_responses, queries, responses, rewards_list, rewards, padding_mask
-            del all_forward_outputs, logits, vpred_temp, logprobs, values, ref_logprobs, kl, non_score_reward
-            del mb_advantage, mb_responses, mb_query_responses, mb_logprobs, mb_return, new_logprobs, vpred
-            del logprobs_diff, ratio, pg_losses, pg_losses2, pg_loss, vpredclipped, vf_losses1, vf_losses2, vf_loss, loss
-
+            del logprobs, values, kl
             gc.collect()
             torch.cuda.empty_cache()
 

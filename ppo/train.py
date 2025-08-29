@@ -20,12 +20,11 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.environ["WANDB_PROJECT"] = "RAG-MCTS"
 
 EPOCHS = 1.0
-PER_DEVICE_TRAIN_BATCH_SIZE=4
-GRADIENT_ACCUMULATION_STEPS=2
+PER_DEVICE_TRAIN_BATCH_SIZE=8
+GRADIENT_ACCUMULATION_STEPS=4
 
 MAX_PPO_EPOCHS = 4
-BATCH_SIZE = 1
-MINI_BATCH_SIZE = 1
+NUM_MINI_BATCHES = 4
 LEARNING_RATE = 1.41e-5
 
 def simple_data_collator(features):
@@ -99,13 +98,20 @@ if __name__ == "__main__":
         num_train_epochs=EPOCHS,
         per_device_train_batch_size=PER_DEVICE_TRAIN_BATCH_SIZE,
         gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
-        batch_size=BATCH_SIZE,
-        mini_batch_size=MINI_BATCH_SIZE,
+        num_mini_batches=NUM_MINI_BATCHES,
         num_ppo_epochs=MAX_PPO_EPOCHS,
+        gamma=1.0,
+        lam=0.95,
+        cliprange=0.2,
+        cliprange_value=0.2,
+        vf_coef=0.1,
+        kl_coef=0.1,
         remove_unused_columns=False,
         output_dir=OUTPUT_DIR,
         report_to="wandb",
-        exp_name="ppo-test"
+        exp_name="ppo-test",
+        save_steps=50,
+        logging_steps=10
     )
 
     trainer = RAGPPOTrainer(
