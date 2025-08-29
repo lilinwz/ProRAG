@@ -128,20 +128,38 @@ class RAGPPOTrainer(PPOTrainer):
         retrieval_model = self.retrieval_model
         dataloader = self.dataloader
         device = accelerator.device
+        model.train()
 
         self.state.global_step = 0
         self.state.episode = 0
         self.state.max_steps = args.num_total_batches
 
+        if args.logging_steps is not None:
+            if args.logging_steps < 1:
+                self.state.logging_steps = math.ceil(self.state.max_steps * args.logging_steps)
+            else:
+                self.state.logging_steps = args.logging_steps
+        if args.eval_steps is not None:
+            if args.eval_steps < 1:
+                self.state.eval_steps = math.ceil(self.state.max_steps * args.eval_steps)
+            else:
+                self.state.eval_steps = args.eval_steps
+        if args.save_steps is not None:
+            if args.save_steps < 1:
+                self.state.save_steps = math.ceil(self.state.max_steps * args.save_steps)
+            else:
+                self.state.save_steps = args.save_steps
         self.control = self.callback_handler.on_train_begin(args, self.state, self.control)
         print(f"Length of the dataloader INSIDE the trainer: {len(dataloader)}")
         for update, data in enumerate(dataloader, 1):
             self.state.episode += args.batch_size
-            print("="*50)
-            print(f"--- Starting Update Step {update} ---")
-            torch.cuda.empty_cache()
-            gc.collect()
-            print(f"Memory after models loaded (before rollout): {torch.cuda.memory_allocated(device) / 1e9:.2f} GB")
+            # print("="*50)
+            # print(f"--- Starting Update Step {update} ---")
+            # torch.cuda.empty_cache()
+            # gc.collect()
+            # print(f"Memory after models loaded (before rollout): {torch.cuda.memory_allocated(device) / 1e9:.2f} GB")
+
+            # --- 1. Rollout Phase ---
             with torch.no_grad():
                 envs = [RAGEnv({key: data[key][i] for key in data}, retrieval_model) for i in range(args.local_batch_size)]
 
@@ -150,7 +168,7 @@ class RAGPPOTrainer(PPOTrainer):
                 query_tensors = [tokenizer.encode(env.state, return_tensors="pt").to(device)[0] for env in envs]
 
                 with unwrap_model_for_generation(self.policy_model, self.accelerator) as unwrapped_model:
-                    for _ in range(7):
+                    for _ in range(MAX_INTERACTION_STEPS):
                         active_envs_indices = [i for i, env in enumerate(envs) if not env.is_done]
                         if not active_envs_indices: 
                             break
@@ -186,6 +204,7 @@ class RAGPPOTrainer(PPOTrainer):
                             all_step_responses[env_idx].append(response_tensor)
                             all_step_rewards[env_idx].append(reward)
                 
+                # --- 2. Post-processing and Reward Calculation ---
                 queries, responses, rewards_list = [], [], []
                 for k in range(len(envs)):
                     if not all_step_responses[k]: 
@@ -209,7 +228,11 @@ class RAGPPOTrainer(PPOTrainer):
                     rewards[-1] = 5.0 * calculate_f1_score(final_match.group(1).strip(), envs[k].final_answer_list) if final_match else -2.0
                     rewards_list.append(rewards)
 
+                # --- 3. Prepare Tensors for PPO Update ---
                 max_len = max(len(r) for r in responses)
+                if max_len == 0:
+                    log.warning(f"Skipping update {update} due to no valid responses.")
+                    continue
                 responses = torch.stack([pad_to_length(r, max_len, tokenizer.pad_token_id) for r in responses])
                 queries = tokenizer.pad({"input_ids": queries}, padding=True, return_tensors="pt")["input_ids"].to(device)
                 rewards = torch.stack([pad_to_length(rw, max_len, 0) for rw in rewards_list])
@@ -234,6 +257,7 @@ class RAGPPOTrainer(PPOTrainer):
                 non_score_reward = -args.kl_coef * kl
                 rewards += non_score_reward
 
+                # --- 4. GAE (Generalized Advantage Estimation) ---
                 lastgaelam = 0
                 advantages_reversed = []
                 for t in reversed(range(responses.shape[1])):
@@ -245,6 +269,7 @@ class RAGPPOTrainer(PPOTrainer):
                 returns = advantages + values
                 advantages = masked_whiten(advantages, ~padding_mask)
 
+            # --- 5. PPO Optimization Phase ---
             for ppo_epoch_idx in range(args.num_ppo_epochs):
                 b_inds = np.random.permutation(args.local_batch_size)
                 for mini_batch_start in range(0, args.local_batch_size, args.local_mini_batch_size):
@@ -286,14 +311,31 @@ class RAGPPOTrainer(PPOTrainer):
                         self.optimizer.step()
                         self.optimizer.zero_grad()
             
+            # --- 6. Logging and Cleanup ---
             self.lr_scheduler.step()
             self.state.global_step += 1
-            self.log({"ppo/loss": loss.item(), "ppo/pg_loss": pg_loss.item(), "ppo/vf_loss": vf_loss.item()})
-            del advantages, returns, query_responses, queries, responses, rewards_list, rewards
-            del all_forward_outputs, logits, vpred_temp, logprobs, values, ref_logprobs
-            del kl, non_score_reward, mb_advantage, mb_responses, mb_query_responses
-            del mb_logprobs, mb_return, new_logprobs, vpred, logprobs_diff, ratio
-            del pg_losses, pg_losses2, pg_loss, vpredclipped, vf_losses1, vf_losses2, vf_loss, loss
+
+            mean_kl = masked_mean(kl, ~padding_mask).item()
+            mean_f1 = np.mean(final_f1_scores)
+            mean_reward_final = masked_mean(rewards, ~padding_mask).item()
+            
+            metrics = {
+                "ppo/loss": loss.item(),
+                "ppo/pg_loss": pg_loss.item(),
+                "ppo/vf_loss": vf_loss.item(),
+                "objective/kl": mean_kl,
+                "objective/f1_score": mean_f1,
+                "objective/reward": mean_reward_final,
+                "time/update": time.time() - start_time,
+                "lr": self.lr_scheduler.get_last_lr()[0],
+            }
+            self.log(metrics)
+
+            del advantages, returns, query_responses, queries, responses, rewards_list, rewards, padding_mask
+            del all_forward_outputs, logits, vpred_temp, logprobs, values, ref_logprobs, kl, non_score_reward
+            del mb_advantage, mb_responses, mb_query_responses, mb_logprobs, mb_return, new_logprobs, vpred
+            del logprobs_diff, ratio, pg_losses, pg_losses2, pg_loss, vpredclipped, vf_losses1, vf_losses2, vf_loss, loss
+
             gc.collect()
             torch.cuda.empty_cache()
 
