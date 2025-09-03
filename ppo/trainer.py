@@ -193,7 +193,7 @@ class RAGPPOTrainer(PPOTrainer):
                             env = envs[env_idx]
                             query_len = padded_queries['input_ids'][i].ne(tokenizer.pad_token_id).sum()
                             response_tensor = response_outputs[i][query_len:]
-                            response_text = tokenizer.decode(response_tensor, skip_special_tokens=True)
+                            response_text = tokenizer.decode(response_tensor, skip_special_tokens=False)
 
                             rm_inputs = rm_tokenizer([env.state + response_text], return_tensors='pt', padding=True, truncation=True).to(device)
                             reward = reward_model(**rm_inputs).logits[0]
@@ -231,6 +231,28 @@ class RAGPPOTrainer(PPOTrainer):
                     final_match = re.search(r"<answer>(.*?)</answer>", envs[k].state, re.DOTALL)
                     rewards[-1] = 5.0 * calculate_f1_score(final_match.group(1).strip(), envs[k].final_answer_list) if final_match else -2.0
                     rewards_list.append(rewards)
+
+                print(f"============== Rollout Data for Update {update} ==============")
+                for i in range(len(envs)):
+                    if not all_step_responses[i]: 
+                        continue
+                    
+                    print(f"----- Sample {i+1} -----")
+                    # 完整的对话历史
+                    print(f"Full Conversation History:\n{envs[i].state}")
+                    
+                    # 分步的响应和奖励
+                    for j, resp_tensor in enumerate(all_step_responses[i]):
+                        response_text = tokenizer.decode(resp_tensor, skip_special_tokens=False)
+                        reward_value = all_step_rewards[i][j].item()
+                        print(f"  Step {j+1} Response: {response_text.strip()} | Reward: {reward_value:.4f}")
+                    
+                    # 最终的奖励
+                    final_reward = rewards_list[i][-1].item()
+                    print(f"  Final Reward: {final_reward:.4f}")
+                    print("-" * 20)
+                print("=" * 60 + "\n")
+                # ******************************************************************
 
                 # --- 3. Prepare Tensors for PPO Update ---
                 max_len = max(len(r) for r in responses)
