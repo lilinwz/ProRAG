@@ -19,12 +19,12 @@ OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/ppo/v1"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.environ["WANDB_PROJECT"] = "RAG-MCTS"
 
-EPOCHS = 1.0
+EPOCHS = 3.0
 PER_DEVICE_TRAIN_BATCH_SIZE=1
-GRADIENT_ACCUMULATION_STEPS=2
+GRADIENT_ACCUMULATION_STEPS=1
 
 MAX_PPO_EPOCHS = 4
-NUM_MINI_BATCHES = 4
+NUM_MINI_BATCHES = 1
 LEARNING_RATE = 1.41e-5
 
 def simple_data_collator(features):
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         remove_unused_columns=False,
         output_dir=OUTPUT_DIR,
         report_to="wandb",
-        exp_name="ppo-test",
+        exp_name="ppo-v1",
         save_steps=50,
         logging_steps=10
     )

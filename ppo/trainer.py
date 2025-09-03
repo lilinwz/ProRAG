@@ -51,7 +51,7 @@ class E5VectorRetriever:
     def retrieve(self, query: str, top_k: int = 3) -> List[str]:
         if self.corpus_embeddings is None or not query: return []
         query_with_prefix = f'query: {query}'
-        query_embedding = self.model.encode(query_with_prefix, convert_to_tensor=True)
+        query_embedding = self.model.encode(query_with_prefix, convert_to_tensor=True, show_progress_bar=False)
         query_embedding = torch.nn.functional.normalize(query_embedding, p=2, dim=0)
         corpus_embeddings_norm = torch.nn.functional.normalize(self.corpus_embeddings, p=2, dim=1)
         cos_scores = torch.mm(query_embedding.unsqueeze(0), corpus_embeddings_norm.transpose(0, 1))[0]
@@ -153,6 +153,7 @@ class RAGPPOTrainer(PPOTrainer):
         
         for update, data in enumerate(dataloader, 1):
             self.state.episode += args.batch_size
+            start_time = time.time()
             # print("="*50)
             # print(f"--- Starting Update Step {update} ---")
             # torch.cuda.empty_cache()
@@ -177,7 +178,7 @@ class RAGPPOTrainer(PPOTrainer):
                         padded_queries = tokenizer.pad({"input_ids": active_query_tensors}, padding=True, return_tensors="pt").to(device)
                         
                         gen_config = GenerationConfig(
-                            max_new_tokens=128, 
+                            max_new_tokens=1024, 
                             pad_token_id=tokenizer.pad_token_id, 
                             do_sample=True, 
                             temperature=0.9, 
@@ -195,6 +196,10 @@ class RAGPPOTrainer(PPOTrainer):
                             response_tensor = response_outputs[i][query_len:]
                             response_text = tokenizer.decode(response_tensor, skip_special_tokens=False)
 
+                            print(f"Full response length for env {i}: {len(response_text)} tokens.")
+                            print(response_text)
+                            print("+==============================+")
+
                             rm_inputs = rm_tokenizer([env.state + response_text], return_tensors='pt', padding=True, truncation=True).to(device)
                             reward = reward_model(**rm_inputs).logits[0]
                             
@@ -210,6 +215,7 @@ class RAGPPOTrainer(PPOTrainer):
 
                 # --- 2. Post-processing and Reward Calculation ---
                 queries, responses, rewards_list = [], [], []
+                final_scores = []
                 for k in range(len(envs)):
                     if not all_step_responses[k]: 
                         continue
@@ -230,29 +236,8 @@ class RAGPPOTrainer(PPOTrainer):
                     
                     final_match = re.search(r"<answer>(.*?)</answer>", envs[k].state, re.DOTALL)
                     rewards[-1] = 5.0 * calculate_f1_score(final_match.group(1).strip(), envs[k].final_answer_list) if final_match else -2.0
+                    final_scores.append(rewards[-1].item())
                     rewards_list.append(rewards)
-
-                print(f"============== Rollout Data for Update {update} ==============")
-                for i in range(len(envs)):
-                    if not all_step_responses[i]: 
-                        continue
-                    
-                    print(f"----- Sample {i+1} -----")
-                    # 完整的对话历史
-                    print(f"Full Conversation History:\n{envs[i].state}")
-                    
-                    # 分步的响应和奖励
-                    for j, resp_tensor in enumerate(all_step_responses[i]):
-                        response_text = tokenizer.decode(resp_tensor, skip_special_tokens=False)
-                        reward_value = all_step_rewards[i][j].item()
-                        print(f"  Step {j+1} Response: {response_text.strip()} | Reward: {reward_value:.4f}")
-                    
-                    # 最终的奖励
-                    final_reward = rewards_list[i][-1].item()
-                    print(f"  Final Reward: {final_reward:.4f}")
-                    print("-" * 20)
-                print("=" * 60 + "\n")
-                # ******************************************************************
 
                 # --- 3. Prepare Tensors for PPO Update ---
                 max_len = max(len(r) for r in responses)
@@ -271,7 +256,10 @@ class RAGPPOTrainer(PPOTrainer):
                 logprobs = selective_log_softmax(logits[:, context_length - 1 : -1], responses)
                 values = vpred_temp[:, context_length - 1 : -1].squeeze(-1)
                 
-                ref_logprobs = logprobs.detach()
+                with self.model.pretrained_model.disable_adapter():
+                    ref_all_forward_outputs = forward(self.model, query_responses, tokenizer.pad_token_id)
+                    ref_logits = ref_all_forward_outputs[0]
+                    ref_logprobs = selective_log_softmax(ref_logits[:, context_length - 1 : -1], responses)
 
                 sequence_lengths = first_true_indices((responses == tokenizer.pad_token_id)) - 1
                 padding_mask = torch.arange(responses.shape[1], device=device)[None, :] > sequence_lengths[:, None]
@@ -300,6 +288,9 @@ class RAGPPOTrainer(PPOTrainer):
                 torch.cuda.empty_cache()
 
             # --- 5. PPO Optimization Phase ---
+            total_pg_loss = 0
+            total_vf_loss = 0
+            mini_batch_count = 0
             for ppo_epoch_idx in range(args.num_ppo_epochs):
                 b_inds = np.random.permutation(args.local_batch_size)
                 for mini_batch_start in range(0, args.local_batch_size, args.local_mini_batch_size):
@@ -312,6 +303,8 @@ class RAGPPOTrainer(PPOTrainer):
                         mb_query_responses = query_responses[mini_batch_inds]
                         mb_logprobs = logprobs[mini_batch_inds]
                         mb_return = returns[mini_batch_inds]
+                        mb_values = values[mini_batch_inds] # <-- 添加 mb_values
+                        mb_mask = ~padding_mask[mini_batch_inds] # <-- 添加 mb_mask
 
                         # final_sequence_length = mb_query_responses.shape[1]
                         # print(f"!!!!!!!! [Process {accelerator.process_index}] PRE-FORWARD CHECK: Final sequence length is {final_sequence_length} tokens. !!!!!!!!!!")
@@ -328,14 +321,18 @@ class RAGPPOTrainer(PPOTrainer):
                         ratio = torch.exp(logprobs_diff)
                         pg_losses = -mb_advantage * ratio
                         pg_losses2 = -mb_advantage * torch.clamp(ratio, 1.0 - args.cliprange, 1.0 + args.cliprange)
-                        pg_loss = masked_mean(torch.max(pg_losses, pg_losses2), ~padding_mask[mini_batch_inds])
+                        pg_loss = masked_mean(torch.max(pg_losses, pg_losses2), mb_mask)
 
-                        vpredclipped = torch.clamp(vpred, values[mini_batch_inds] - args.cliprange_value, values[mini_batch_inds] + args.cliprange_value)
+                        vpredclipped = torch.clamp(vpred, mb_values - args.cliprange_value, mb_values + args.cliprange_value)
                         vf_losses1 = torch.square(vpred - mb_return)
                         vf_losses2 = torch.square(vpredclipped - mb_return)
-                        vf_loss = 0.5 * masked_mean(torch.max(vf_losses1, vf_losses2), ~padding_mask[mini_batch_inds])
+                        vf_loss = 0.5 * masked_mean(torch.max(vf_losses1, vf_losses2), mb_mask)
 
                         loss = pg_loss + args.vf_coef * vf_loss
+
+                        total_pg_loss += pg_loss.item()
+                        total_vf_loss += vf_loss.item()
+                        mini_batch_count += 1
                         
                         accelerator.backward(loss)
                         self.optimizer.step()
@@ -346,17 +343,17 @@ class RAGPPOTrainer(PPOTrainer):
                         del mb_advantage, mb_responses, mb_query_responses, mb_logprobs, mb_return, mb_values, mb_mask
             
             # --- 6. Logging and Cleanup ---
-            self.lr_scheduler.step()
-            self.state.global_step += 1
-
+            mean_pg_loss = total_pg_loss / mini_batch_count if mini_batch_count > 0 else 0
+            mean_vf_loss = total_vf_loss / mini_batch_count if mini_batch_count > 0 else 0
+            mean_ppo_loss = mean_pg_loss + args.vf_coef * mean_vf_loss
             mean_kl = masked_mean(kl, ~padding_mask).item()
-            mean_f1 = np.mean(final_f1_scores)
+            mean_f1 = np.mean(final_scores)
             mean_reward_final = masked_mean(rewards, ~padding_mask).item()
             
             metrics = {
-                "ppo/loss": loss.item(),
-                "ppo/pg_loss": pg_loss.item(),
-                "ppo/vf_loss": vf_loss.item(),
+                "ppo/loss": mean_ppo_loss,
+                "ppo/pg_loss": mean_pg_loss,
+                "ppo/vf_loss": mean_vf_loss,
                 "objective/kl": mean_kl,
                 "objective/f1_score": mean_f1,
                 "objective/reward": mean_reward_final,
@@ -364,10 +361,21 @@ class RAGPPOTrainer(PPOTrainer):
                 "lr": self.lr_scheduler.get_last_lr()[0],
             }
             self.log(metrics)
+            self.state.global_step += 1
+
+            self.lr_scheduler.step()
+            self.control = self.callback_handler.on_step_end(args, self.state, self.control)
+            if self.control.should_save:
+                self._save_checkpoint(model, trial=None)
+                self.control = self.callback_handler.on_save(self.args, self.state, self.control)
 
             del advantages, returns, query_responses, queries, responses, rewards_list, rewards, padding_mask
             del logprobs, values, kl
             gc.collect()
             torch.cuda.empty_cache()
 
+        self.control = self.callback_handler.on_train_end(args, self.state, self.control)
+        if self.control.should_save:
+            self._save_checkpoint(model, trial=None, metrics=None)
+            self.control = self.callback_handler.on_save(self.args, self.state, self.control)
         print("PPO training finished.")
