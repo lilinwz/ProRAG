@@ -1,10 +1,13 @@
-import torch
 import re
+import collections
 from typing import List, Dict, Any
-from transformers import GenerationConfig, StoppingCriteriaList
+import torch
+from transformers import GenerationConfig, StoppingCriteria, StoppingCriteriaList
+from sentence_transformers import SentenceTransformer
 from trl import GRPOTrainer
 
 MAX_INTERACTION_STEPS = 7
+NUM_ROLLOUTS = 2
 
 class StopOnKeywords(StoppingCriteria):
     def __init__(self, tokenizer, stop_tokens):
@@ -25,11 +28,16 @@ class E5VectorRetriever:
         self.raw_paragraphs = paragraphs
         self.model = model
         self.corpus = [f'passage: {p.get("paragraph_text", "")}' for p in paragraphs]
-        if not self.corpus: self.corpus_embeddings = None; return
-        self.corpus_embeddings = self.model.encode(self.corpus, convert_to_tensor=True, show_progress_bar=False)
+        if not self.corpus: 
+            self.corpus_embeddings = None
+            return
+        self.corpus_embeddings = self.model.encode(
+            self.corpus, convert_to_tensor=True, show_progress_bar=False
+        )
 
     def retrieve(self, query: str, top_k: int = 3) -> List[str]:
-        if self.corpus_embeddings is None or not query: return []
+        if self.corpus_embeddings is None or not query: 
+            return []
         query_with_prefix = f'query: {query}'
         query_embedding = self.model.encode(query_with_prefix, convert_to_tensor=True, show_progress_bar=False)
         query_embedding = torch.nn.functional.normalize(query_embedding, p=2, dim=0)
@@ -39,7 +47,9 @@ class E5VectorRetriever:
         retrieved_docs_with_info = []
         for score, idx in zip(top_results[0], top_results[1]):
             paragraph = self.raw_paragraphs[idx]
-            retrieved_docs_with_info.append(f"Document {paragraph['idx']} (Title: {paragraph['title']}): {paragraph['paragraph_text']}")
+            retrieved_docs_with_info.append(
+                f"Document {paragraph['idx']} (Title: {paragraph['title']}): {paragraph['paragraph_text']}"
+            )
         return retrieved_docs_with_info
 
 class RAGEnv:
@@ -93,10 +103,12 @@ class RAGTrainer(GRPOTrainer):
 
     def _generate_and_score_completions(self, inputs: List[Dict[str, Any]]) -> Dict[str, Any]:
         print(f"--- Starting Interactive Rollout for {len(inputs)} prompts ---")
+        device = self.accelerator.device
 
-        all_prompts = []
-        all_completions = []
-        all_rewards = []
+        all_prompts_texts: List[str] = []
+        completion_texts: List[str] = []  # length = batch * NUM_ROLLOUTS
+        completion_step_deltas: List[List[str]] = []  # per completion, list of step deltas
+        completion_step_rewards: List[List[float]] = []  # per completion, per-step rewards
 
         gen_config = GenerationConfig(
             max_new_tokens=512,
@@ -107,113 +119,161 @@ class RAGTrainer(GRPOTrainer):
         )
         stop_criteria = StoppingCriteriaList([StopOnKeywords(self.processing_class, ["<retrieval>", "<|im_end|>"])])
 
+        # 1) Rollouts: collect step deltas and step rewards
         for data_item in inputs:
-            env = RAGEnv(data_item, self.retrieval_model)
-            trajectory = []
+            prompt_text = None
+            for k in range(NUM_ROLLOUTS):
+                env = RAGEnv(data_item, self.retrieval_model)
+                if prompt_text is None:
+                    prompt_text = env.state
 
-            for _ in range(MAX_INTERACTION_STEPS):
-                query_tensor = self.processing_class.encode(env.state, return_tensors="pt").to(self.accelerator.device)
+                # For GRPO grouping we append the prompt per rollout (same prompt repeated)
+                all_prompts_texts.append(env.state)
 
-                with torch.no_grad():
-                    response_tensor = self.accelerator.unwrap_model(self.model).generate(
-                        query_tensor,
-                        generation_config=gen_config,
-                        stopping_criteria=stop_criteria,
-                    )
-                
-                response_tensor = response_tensor[0, query_tensor.shape[1]:]
-                response_text = self.processing_class.decode(response_tensor, skip_special_tokens=False)
-                
-                state_for_reward = env.state + response_text
-                inputs = rm_tokenizer(state_for_reward, return_tensors='pt', padding=True, max_length=4096, truncation=True).to(reward_model.device)
-                with torch.no_grad():
-                    step_reward = self.reward_model(**rm_inputs).logits.squeeze().item()
-                
-                trajectory.append({"prompt": env.state, "response": response_tensor, "reward": step_reward})
-                
-                new_state, is_done = env.step(response_text)
-                if is_done:
-                    final_match = re.search(r"<answer>(.*?)</answer>", response_text, re.DOTALL)
-                    if final_match:
-                        final_f1_reward = 5.0 * calculate_f1_score(final_match.group(1).strip(), env.final_answer_list)
-                    else:
-                        final_f1_reward = -2.0
-                    step_reward += final_f1_reward
+                step_deltas: List[str] = []
+                step_rewards: List[float] = []
+
+                for step_idx in range(MAX_INTERACTION_STEPS):
+                    # encode current state
+                    query_tensor = self.processing_class.encode(env.state, return_tensors="pt").to(device)
+
+                    with torch.no_grad():
+                        response_tensor = self.accelerator.unwrap_model(self.model).generate(
+                            query_tensor,
+                            generation_config=gen_config,
+                            stopping_criteria=stop_criteria,
+                        )
+
+                    # generated tokens relative to prompt
+                    response_slice = response_tensor[0, query_tensor.shape[1]:]
+                    response_text = self.processing_class.decode(response_slice, skip_special_tokens=False)
+
+                    # advance environment -> get delta (response + retrieval docs if any), new_state includes retrieval
+                    delta_text, new_state, done = env.step(response_text)
+
+                    # compute step reward based on post-action new_state (includes retrieval docs)
+                    rm_inputs = self.rm_tokenizer(new_state, return_tensors="pt", padding=True, truncation=True, max_length=4096).to(device)
+                    with torch.no_grad():
+                        rm_outputs = self.reward_model(**rm_inputs)
+                        step_reward = float(rm_outputs.logits.squeeze().cpu().numpy().item())
+
+                    # if done and final answer exists, add final F1 bonus/penalty
+                    if done:
+                        final_match = re.search(r"<answer>(.*?)</answer>", new_state, re.DOTALL)
+                        if final_match:
+                            final_f1 = 5.0 * calculate_f1_score(final_match.group(1).strip(), env.final_answer_list)
+                        else:
+                            final_f1 = -2.0
+                        step_reward += final_f1
+
+                    step_deltas.append(delta_text)
+                    step_rewards.append(step_reward)
+
+                    if done:
+                        break
+
+                completion_text = "".join(step_deltas)  # full completion including retrieval docs
+                completion_texts.append(completion_text)
+                completion_step_deltas.append(step_deltas)
+                completion_step_rewards.append(step_rewards)
+
+        total_completions = len(completion_texts)
+        if total_completions == 0:
+            raise RuntimeError("No completions generated in rollouts.")
+
+        # 2) Compute per-step group baselines and advantages
+        # find max steps among completions
+        max_steps = max(len(sr) for sr in completion_step_rewards)
+        device = self.accelerator.device
+
+        # build rewards matrix with NaN where step missing
+        rewards_matrix = torch.full((total_completions, max_steps), float('nan'), device=device, dtype=torch.float32)
+        for i, step_rewards in enumerate(completion_step_rewards):
+            for t, r in enumerate(step_rewards):
+                rewards_matrix[i, t] = float(r)
+
+        # comp_step_adv_matrix: same shape, filled with advantages (0 where NaN)
+        comp_step_adv_matrix = torch.zeros_like(rewards_matrix)
+        comp_step_mask = ~torch.isnan(rewards_matrix)
+        for t in range(max_steps):
+            col = rewards_matrix[:, t]
+            mask = ~torch.isnan(col)
+            if mask.sum() == 0:
+                comp_step_adv_matrix[:, t] = 0.0
+                continue
+            vals = col[mask]
+            mean = vals.mean()
+            std = vals.std(unbiased=False) + 1e-8
+            advs = (vals - mean) / std
+            col_adv = torch.zeros_like(col)
+            col_adv[mask] = advs
+            comp_step_adv_matrix[:, t] = col_adv
+
+        # 3) Tokenize prompts and completions (use add_special_tokens=False for per-step tokenization consistency)
+        prompt_inputs = self.processing_class(text=all_prompts_texts, return_tensors="pt", padding=True, padding_side="left").to(device)
+        prompt_ids = prompt_inputs["input_ids"]
+        prompt_mask = prompt_inputs["attention_mask"]
+
+        completion_inputs = self.processing_class(text=completion_texts, return_tensors="pt", padding=True, padding_side="right").to(device)
+        completion_ids = completion_inputs["input_ids"]
+
+        # truncate completions if too long
+        if completion_ids.shape[1] > self.max_completion_length:
+            completion_ids = completion_ids[:, : self.max_completion_length]
+
+        # 4) Map per-step advantages to per-token advantages by tokenizing each delta with add_special_tokens=False
+        per_token_advantages = torch.zeros_like(completion_ids, dtype=torch.float32, device=device)
+        per_token_mask = torch.zeros_like(completion_ids, dtype=torch.bool, device=device)
+
+        for i, step_deltas in enumerate(completion_step_deltas):
+            offset = 0
+            for t, delta_text in enumerate(step_deltas):
+                # tokenize delta_text without special tokens to get token count
+                tok = self.processing_class(delta_text, return_tensors="pt", add_special_tokens=False)
+                tok_ids = tok["input_ids"][0]
+                L = min(len(tok_ids), completion_ids.shape[1] - offset)
+                if L <= 0:
+                    break
+                # assign this step's advantage to these tokens
+                per_token_advantages[i, offset:offset+L] = comp_step_adv_matrix[i, t]
+                per_token_mask[i, offset:offset+L] = True
+                offset += L
+                if offset >= completion_ids.shape[1]:
                     break
 
-            
-            all_prompts_text.append(initial_prompt)
-            all_completions_text.append(full_completion_text)
-
-        # 4. 调用父类的原始方法来处理评分和后续步骤
-        # 这是一个技巧：我们用交互式生成的结果 "欺骗" 原始的 GRPOTrainer，
-        # 让它以为这些 completions 是用简单 generate 生成的。
-        # 为此，我们需要重新构建 `inputs` 字典，因为原始方法需要它来计算奖励
-        
-        # 重新构造 `inputs` 列表，其长度现在是 batch_size * num_generations
-        # 这是必要的，因为奖励函数可能需要原始数据项中的其他信息（例如 `answer`）
-        extended_inputs = []
-        for item in inputs:
-            for _ in range(self.num_generations):
-                 extended_inputs.append(item)
-
-        # 准备好所有需要的信息后，调用父类的 `_calculate_rewards_and_prepare_for_loss`
-        # （这是一个假设的方法名，我们需要查看 GRPOTrainer 源码找到正确的方法）
-        # 经过查阅 trl 源码，后续逻辑都在 _generate_and_score_completions 方法内部，
-        # 所以我们不能简单调用父类方法，而是需要复制其后续逻辑。
-
-        # --- 从这里开始，我们复制 GRPOTrainer 的标准流程 ---
-        
-        # 将 prompts 和 completions 编码为 tensor
-        prompt_inputs = self.processing_class(text=all_prompts_text, return_tensors="pt", padding=True, padding_side="left").to(self.accelerator.device)
-        prompt_ids, prompt_mask = prompt_inputs["input_ids"], prompt_inputs["attention_mask"]
-
-        completion_ids = self.processing_class(text=all_completions_text, return_tensors="pt", padding=True, padding_side="right").to(self.accelerator.device)["input_ids"]
-        
-        # 截断到 max_completion_length
-        if completion_ids.shape[1] > self.max_completion_length:
-            completion_ids = completion_ids[:, :self.max_completion_length]
-
+        # 5) Build prompt+completion concat ids & attention mask for later per-token logprobs
         prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
-        
-        # 创建 completion mask
-        is_eos = (completion_ids == self.eos_token_id)
-        eos_indices = torch.argmax(is_eos.int(), dim=1)
-        eos_indices[~is_eos.any(dim=1)] = completion_ids.shape[1]
-        completion_mask = torch.arange(completion_ids.shape[1], device=self.accelerator.device)[None, :] < eos_indices[:, None]
-        
-        attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
+        attention_mask = torch.cat([prompt_mask, (completion_ids != self.processing_class.pad_token_id).long()], dim=1)
 
-        # 计算奖励
-        rewards_per_func = self._calculate_rewards(extended_inputs, all_prompts_text, all_completions_text, [])
-        rewards = (rewards_per_func * self.reward_weights.to(self.accelerator.device).unsqueeze(0)).nansum(dim=1)
-        rewards = self.accelerator.gather(rewards)
-        
-        # 计算优势
-        mean_rewards = rewards.view(-1, self.num_generations).mean(dim=1, keepdim=True)
-        advantages = rewards.view(-1, self.num_generations) - mean_rewards
-        advantages = advantages.view(-1)
-        
-        # 切片以获取当前进程的数据
-        process_slice = slice(self.accelerator.process_index * len(all_prompts_text), (self.accelerator.process_index + 1) * len(all_prompts_text))
-        advantages = advantages[process_slice]
-        
-        # 计算参考模型的 logprobs
+        # 6) compute reference per-token logprobs if needed (same as before)
         ref_per_token_logps = None
-        if self.beta != 0.0:
+        if getattr(self, "beta", 0.0) != 0.0:
             with torch.no_grad():
-                if self.ref_model:
-                    ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(self.ref_model, prompt_completion_ids, attention_mask, completion_ids.shape[1])
-                else: # 使用 PEFT disable_adapter
+                if getattr(self, "ref_model", None) is not None:
+                    ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(
+                        self.ref_model, prompt_completion_ids, attention_mask, completion_ids.shape[1]
+                    )
+                else:
                     with self.accelerator.unwrap_model(self.model).disable_adapter():
-                        ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(self.model, prompt_completion_ids, attention_mask, completion_ids.shape[1])
+                        ref_per_token_logps, _ = self._get_per_token_logps_and_entropies(
+                            self.model, prompt_completion_ids, attention_mask, completion_ids.shape[1]
+                        )
 
-        # 返回给 compute_loss 方法所需的所有数据
+        # Flatten for multi-process gather if needed
+        advantages_flat = per_token_advantages.view(-1)
+        token_mask_flat = per_token_mask.view(-1)
+        advantages_flat = self.accelerator.gather(advantages_flat)
+        token_mask_flat = self.accelerator.gather(token_mask_flat)
+
         return {
             "prompt_ids": prompt_ids,
             "prompt_mask": prompt_mask,
             "completion_ids": completion_ids,
-            "completion_mask": completion_mask,
-            "advantages": advantages,
-            "ref_per_token_logps": ref_per_token_logps
+            "completion_mask": per_token_mask,
+            "advantages_per_token": per_token_advantages,
+            "advantages_flat": advantages_flat,
+            "token_mask_flat": token_mask_flat,
+            "ref_per_token_logps": ref_per_token_logps,
+            "prompt_completion_ids": prompt_completion_ids,
+            "attention_mask": attention_mask,
         }
