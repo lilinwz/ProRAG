@@ -1,1 +1,11 @@
-run-20250824_073911-jl200yyu/logs/debug-internal.log
+{"time":"2025-08-24T07:39:11.883535637Z","level":"INFO","msg":"stream: starting","core version":"0.21.1"}
+{"time":"2025-08-24T07:39:12.072648321Z","level":"INFO","msg":"stream: created new stream","id":"jl200yyu"}
+{"time":"2025-08-24T07:39:12.072694808Z","level":"INFO","msg":"stream: started","id":"jl200yyu"}
+{"time":"2025-08-24T07:39:12.072722616Z","level":"INFO","msg":"writer: started","stream_id":"jl200yyu"}
+{"time":"2025-08-24T07:39:12.07274072Z","level":"INFO","msg":"sender: started","stream_id":"jl200yyu"}
+{"time":"2025-08-24T07:39:12.072804449Z","level":"INFO","msg":"handler: started","stream_id":"jl200yyu"}
+{"time":"2025-08-25T11:44:11.092804896Z","level":"INFO","msg":"stream: closing","id":"jl200yyu"}
+{"time":"2025-08-25T11:44:11.505563106Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-08-25T11:44:11.669144978Z","level":"INFO","msg":"handler: closed","stream_id":"jl200yyu"}
+{"time":"2025-08-25T11:44:11.669258781Z","level":"INFO","msg":"sender: closed","stream_id":"jl200yyu"}
+{"time":"2025-08-25T11:44:11.669283657Z","level":"INFO","msg":"stream: closed","id":"jl200yyu"}

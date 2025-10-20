@@ -1,0 +1,8 @@
+accelerate==1.10.1
+datasets==4.0.0
+peft==0.17.1
+sentence_transformers==5.1.0
+transformers==4.55.4
+trl==0.21.0
+wandb
+flash-attn

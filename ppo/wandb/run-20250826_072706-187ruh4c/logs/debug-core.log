@@ -1,1 +1,14 @@
-/home/v-zhaowan/.cache/wandb/logs/core-debug-20250826_072706.log
+{"time":"2025-08-26T07:27:06.867298879Z","level":"INFO","msg":"main: starting server","port-filename":"/tmp/tmpzyr_ng32/port-1603870.txt","pid":1603870,"log-level":0,"disable-analytics":false,"shutdown-on-parent-exit":false,"enable-dcgm-profiling":false}
+{"time":"2025-08-26T07:27:06.868169755Z","level":"INFO","msg":"server: accepting connections","addr":{"Name":"/tmp/wandb-1603870-1603917-225483388/socket","Net":"unix"}}
+{"time":"2025-08-26T07:27:06.868255766Z","level":"INFO","msg":"server: will exit if parent process dies","ppid":1603870}
+{"time":"2025-08-26T07:27:07.052838965Z","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"1(@)"}
+{"time":"2025-08-26T07:27:07.058085304Z","level":"INFO","msg":"handleInformInit: received","streamId":"187ruh4c","id":"1(@)"}
+{"time":"2025-08-26T07:27:07.264802266Z","level":"INFO","msg":"handleInformInit: stream started","streamId":"187ruh4c","id":"1(@)"}
+{"time":"2025-08-26T07:27:11.721470386Z","level":"INFO","msg":"handleInformTeardown: server teardown initiated","id":"1(@)"}
+{"time":"2025-08-26T07:27:11.721579008Z","level":"INFO","msg":"connection: closing","id":"1(@)"}
+{"time":"2025-08-26T07:27:11.721629583Z","level":"INFO","msg":"server is shutting down"}
+{"time":"2025-08-26T07:27:11.721702839Z","level":"INFO","msg":"connection: closed successfully","id":"1(@)"}
+{"time":"2025-08-26T07:27:11.721739268Z","level":"INFO","msg":"server: listener closed","addr":{"Name":"/tmp/wandb-1603870-1603917-225483388/socket","Net":"unix"}}
+{"time":"2025-08-26T07:27:12.348897109Z","level":"INFO","msg":"handleInformTeardown: server shutdown complete","id":"1(@)"}
+{"time":"2025-08-26T07:27:12.348914221Z","level":"INFO","msg":"connection: ManageConnectionData: connection closed","id":"1(@)"}
+{"time":"2025-08-26T07:27:12.348920503Z","level":"INFO","msg":"server is closed"}

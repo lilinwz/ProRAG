@@ -4,11 +4,13 @@ import collections
 import time
 import gc
 import math
+import os
 import numpy as np
 from tqdm import tqdm
 from typing import List, Dict, Tuple
 
 from transformers import AutoTokenizer, StoppingCriteria, StoppingCriteriaList, GenerationConfig
+from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 from sentence_transformers import SentenceTransformer
 
 from trl import PPOTrainer
@@ -23,7 +25,6 @@ from trl.trainer.utils import (
 from trl.models.utils import unwrap_model_for_generation
 from trl.core import masked_mean, masked_whiten
 
-# 定义一个在官方代码中使用的常量
 INVALID_LOGPROB = 1.0
 MAX_INTERACTION_STEPS = 7
 
@@ -96,7 +97,7 @@ class RAGEnv:
             subquery_match = re.search(r"<subquery>(.*?)</subquery>", response_text, re.DOTALL)
             if subquery_match:
                 subquery = subquery_match.group(1).strip()
-                retrieved_docs = self.retriever.retrieve(subquery, top_k=3)
+                retrieved_docs = self.retriever.retrieve(subquery, top_k=1)
                 retrieved_docs_text = "\n".join(retrieved_docs)
                 self.state += f"\n{retrieved_docs_text}\n</retrieval>\n"
         
@@ -109,21 +110,16 @@ class RAGPPOTrainer(PPOTrainer):
     def __init__(self, *args, **kwargs):
         self.reward_tokenizer = kwargs.pop('reward_tokenizer')
         self.retrieval_model = kwargs.pop('retrieval_model')
+
         super().__init__(*args, **kwargs)
-        self.model = self.policy_model
-        if hasattr(self, 'ref_model') and self.ref_model is not None:
-            if self.ref_model is not self.policy_model:
-                del self.ref_model
-                gc.collect()
-                torch.cuda.empty_cache()
             
     def train(self):
         args = self.args
         accelerator = self.accelerator
         optimizer = self.optimizer
         tokenizer = self.processing_class
-        model = self.model
         rm_tokenizer = self.reward_tokenizer
+        model = self.model
         reward_model = self.reward_model
         retrieval_model = self.retrieval_model
         dataloader = self.dataloader
@@ -161,55 +157,59 @@ class RAGPPOTrainer(PPOTrainer):
             # print(f"Memory after models loaded (before rollout): {torch.cuda.memory_allocated(device) / 1e9:.2f} GB")
 
             # --- 1. Rollout Phase ---
+            reward_model.to(device)
+            retrieval_model.to(device)
             with torch.no_grad():
                 envs = [RAGEnv({key: data[key][i] for key in data}, retrieval_model) for i in range(args.local_batch_size)]
 
                 all_step_responses = [[] for _ in envs]
                 all_step_rewards = [[] for _ in envs]
-                query_tensors = [tokenizer.encode(env.state, return_tensors="pt").to(device)[0] for env in envs]
+                
+                with unwrap_model_for_generation(model, accelerator) as unwrapped_model:
+                    gen_config = GenerationConfig(
+                        max_new_tokens=512, 
+                        temperature=0.7, 
+                        top_k=0.0,
+                        top_p=1.0,
+                        do_sample=True,
+                        pad_token_id=tokenizer.pad_token_id,
+                        eos_token_id=tokenizer.eos_token_id
+                    )
+                    stopping_criteria = StoppingCriteriaList([StopOnKeywords(tokenizer, ["<retrieval>", "<|im_end|>"])])
 
-                with unwrap_model_for_generation(self.policy_model, self.accelerator) as unwrapped_model:
                     for _ in range(MAX_INTERACTION_STEPS):
                         active_envs_indices = [i for i, env in enumerate(envs) if not env.is_done]
                         if not active_envs_indices: 
                             break
 
-                        active_query_tensors = [query_tensors[i] for i in active_envs_indices]
-                        padded_queries = tokenizer.pad({"input_ids": active_query_tensors}, padding=True, return_tensors="pt").to(device)
-                        
-                        gen_config = GenerationConfig(
-                            max_new_tokens=1024, 
-                            pad_token_id=tokenizer.pad_token_id, 
-                            do_sample=True, 
-                            temperature=0.9, 
-                            top_k=50
-                        )
-                        response_outputs = unwrapped_model.generate(
-                            **padded_queries, 
-                            generation_config=gen_config, 
-                            stopping_criteria=StoppingCriteriaList([StopOnKeywords(tokenizer, ["<retrieval>", "<|im_end|>"])])
-                        )
-
-                        for i, env_idx in enumerate(active_envs_indices):
+                        for env_idx in active_envs_indices:
                             env = envs[env_idx]
-                            query_len = padded_queries['input_ids'][i].ne(tokenizer.pad_token_id).sum()
-                            response_tensor = response_outputs[i][query_len:]
-                            response_text = tokenizer.decode(response_tensor, skip_special_tokens=False)
+                            query_tensor = tokenizer.encode(env.state, return_tensors="pt").to(device)
+                            response_outputs = unwrapped_model.policy.generate(
+                                input_ids=query_tensor, 
+                                generation_config=gen_config, 
+                                stopping_criteria=stopping_criteria
+                            )
 
-                            print(f"Full response length for env {i}: {len(response_text)} tokens.")
-                            print(response_text)
-                            print("+==============================+")
+                            query_len = query_tensor.shape[1]
+                            response_tensor = response_outputs[0, query_len:]
+                            response_text = tokenizer.decode(response_tensor, skip_special_tokens=False)
 
                             rm_inputs = rm_tokenizer([env.state + response_text], return_tensors='pt', padding=True, truncation=True).to(device)
                             reward = reward_model(**rm_inputs).logits[0]
                             
                             new_state_text, _ = env.step(response_text)
-                            query_tensors[env_idx] = tokenizer.encode(new_state_text, return_tensors="pt").to(device)[0]
 
+                            accelerator.print(f"Full response length for env {env_idx}: {len(response_text)} tokens.")
+                            accelerator.print(response_text)
+                            accelerator.print("+==============================+")
+                            
                             all_step_responses[env_idx].append(response_tensor)
                             all_step_rewards[env_idx].append(reward)
                 
-                del query_tensors, unwrapped_model, padded_queries, response_outputs
+                del response_outputs
+                reward_model.to('cpu')
+                retrieval_model.to('cpu')
                 gc.collect()
                 torch.cuda.empty_cache()
 
@@ -240,25 +240,43 @@ class RAGPPOTrainer(PPOTrainer):
                     rewards_list.append(rewards)
 
                 # --- 3. Prepare Tensors for PPO Update ---
-                max_len = max(len(r) for r in responses)
-                if max_len == 0:
-                    log.warning(f"Skipping update {update} due to no valid responses.")
+                # max_len = max(len(r) for r in responses)
+                # if max_len == 0:
+                #     log.warning(f"Skipping update {update} due to no valid responses.")
+                #     continue
+                # responses = torch.stack([pad_to_length(r, max_len, tokenizer.pad_token_id) for r in responses])
+                # queries = tokenizer.pad({"input_ids": queries}, padding=True, return_tensors="pt")["input_ids"].to(device)
+                # rewards = torch.stack([pad_to_length(rw, max_len, 0) for rw in rewards_list])
+                
+                # query_responses = torch.cat((queries, responses), dim=1)
+                # context_length = queries.shape[1]
+
+                local_max_len = max(len(r) for r in responses) if responses else 0
+                local_max_len_tensor = torch.tensor(local_max_len, device=accelerator.device)
+                all_max_lens = [torch.tensor(0, device=accelerator.device) for _ in range(accelerator.num_processes)]
+                torch.distributed.all_gather(all_max_lens, local_max_len_tensor)
+                global_max_len = max(t.item() for t in all_max_lens)
+
+                if global_max_len == 0:
+                    accelerator.print(f"Skipping update {update} due to no valid responses across all processes.")
                     continue
-                responses = torch.stack([pad_to_length(r, max_len, tokenizer.pad_token_id) for r in responses])
+                
+                responses = torch.stack([pad_to_length(r, global_max_len, tokenizer.pad_token_id) for r in responses])
                 queries = tokenizer.pad({"input_ids": queries}, padding=True, return_tensors="pt")["input_ids"].to(device)
-                rewards = torch.stack([pad_to_length(rw, max_len, 0) for rw in rewards_list])
+                rewards = torch.stack([pad_to_length(rw, global_max_len, 0) for rw in rewards_list])
                 
                 query_responses = torch.cat((queries, responses), dim=1)
                 context_length = queries.shape[1]
 
-                all_forward_outputs = forward(self.model, query_responses, tokenizer.pad_token_id)
-                logits, vpred_temp = all_forward_outputs[0], all_forward_outputs[2]
+                policy_output, vpred_temp = forward(model, query_responses, tokenizer.pad_token_id)
+                logits = policy_output.logits
                 logprobs = selective_log_softmax(logits[:, context_length - 1 : -1], responses)
                 values = vpred_temp[:, context_length - 1 : -1].squeeze(-1)
                 
-                with self.model.pretrained_model.disable_adapter():
-                    ref_all_forward_outputs = forward(self.model, query_responses, tokenizer.pad_token_id)
-                    ref_logits = ref_all_forward_outputs[0]
+                with torch.no_grad():
+                    with self.null_ref_context(): 
+                        ref_output, _ = forward(model, query_responses, tokenizer.pad_token_id)
+                    ref_logits = ref_output.logits
                     ref_logprobs = selective_log_softmax(ref_logits[:, context_length - 1 : -1], responses)
 
                 sequence_lengths = first_true_indices((responses == tokenizer.pad_token_id)) - 1
@@ -283,11 +301,16 @@ class RAGPPOTrainer(PPOTrainer):
                 returns = advantages + values
                 advantages = masked_whiten(advantages, ~padding_mask)
 
-                del all_forward_outputs, logits, vpred_temp, ref_logprobs, non_score_reward, delta
+                mean_kl = masked_mean(kl, ~padding_mask).item()
+                mean_reward_final = masked_mean(rewards, ~padding_mask).item()
+
+                del policy_output, vpred_temp, ref_output, ref_logits, non_score_reward, kl, rewards
+                del ref_logprobs, advantages_reversed, lastgaelam, delta, all_step_responses, all_step_rewards
                 gc.collect()
                 torch.cuda.empty_cache()
 
             # --- 5. PPO Optimization Phase ---
+            accelerator.print(f"Starting PPO optimization.")
             total_pg_loss = 0
             total_vf_loss = 0
             mini_batch_count = 0
@@ -297,7 +320,7 @@ class RAGPPOTrainer(PPOTrainer):
                     mini_batch_end = mini_batch_start + args.local_mini_batch_size
                     mini_batch_inds = b_inds[mini_batch_start:mini_batch_end]
                     
-                    with accelerator.accumulate(self.model):
+                    with accelerator.accumulate(model):
                         mb_advantage = advantages[mini_batch_inds]
                         mb_responses = responses[mini_batch_inds]
                         mb_query_responses = query_responses[mini_batch_inds]
@@ -312,8 +335,8 @@ class RAGPPOTrainer(PPOTrainer):
                         # print(torch.cuda.memory_summary(device=accelerator.device))
                         # print(f"---------------------------------------------------------------------------------")
 
-                        all_forward_outputs = forward(self.model, mb_query_responses, tokenizer.pad_token_id)
-                        logits, vpred_temp = all_forward_outputs[0], all_forward_outputs[2]
+                        policy_output, vpred_temp = forward(model, mb_query_responses, tokenizer.pad_token_id)
+                        logits = policy_output.logits
                         new_logprobs = selective_log_softmax(logits[:, context_length - 1 : -1], mb_responses)
                         vpred = vpred_temp[:, context_length - 1 : -1].squeeze(-1)
                         
@@ -335,20 +358,19 @@ class RAGPPOTrainer(PPOTrainer):
                         mini_batch_count += 1
                         
                         accelerator.backward(loss)
-                        self.optimizer.step()
-                        self.optimizer.zero_grad()
+                        optimizer.step()
+                        optimizer.zero_grad()
 
-                        del all_forward_outputs, logits, vpred_temp, new_logprobs, vpred, logprobs_diff, ratio
-                        del pg_losses, pg_losses2, vpredclipped, vf_losses1, vf_losses2, loss
+                        del policy_output, vpred_temp, logits, new_logprobs, vpred
+                        del logprobs_diff, ratio, pg_losses, pg_losses2, pg_loss
+                        del vpredclipped, vf_losses1, vf_losses2, vf_loss, loss
                         del mb_advantage, mb_responses, mb_query_responses, mb_logprobs, mb_return, mb_values, mb_mask
             
             # --- 6. Logging and Cleanup ---
             mean_pg_loss = total_pg_loss / mini_batch_count if mini_batch_count > 0 else 0
             mean_vf_loss = total_vf_loss / mini_batch_count if mini_batch_count > 0 else 0
             mean_ppo_loss = mean_pg_loss + args.vf_coef * mean_vf_loss
-            mean_kl = masked_mean(kl, ~padding_mask).item()
             mean_f1 = np.mean(final_scores)
-            mean_reward_final = masked_mean(rewards, ~padding_mask).item()
             
             metrics = {
                 "ppo/loss": mean_ppo_loss,
@@ -367,15 +389,4 @@ class RAGPPOTrainer(PPOTrainer):
             self.control = self.callback_handler.on_step_end(args, self.state, self.control)
             if self.control.should_save:
                 self._save_checkpoint(model, trial=None)
-                self.control = self.callback_handler.on_save(self.args, self.state, self.control)
-
-            del advantages, returns, query_responses, queries, responses, rewards_list, rewards, padding_mask
-            del logprobs, values, kl
-            gc.collect()
-            torch.cuda.empty_cache()
-
-        self.control = self.callback_handler.on_train_end(args, self.state, self.control)
-        if self.control.should_save:
-            self._save_checkpoint(model, trial=None, metrics=None)
-            self.control = self.callback_handler.on_save(self.args, self.state, self.control)
-        print("PPO training finished.")
+                self.co

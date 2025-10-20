@@ -1,27 +1,27 @@
 import torch
 import json
 from datasets import Dataset
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForSequenceClassification
 from sentence_transformers import SentenceTransformer
 from peft import LoraConfig
 from trainer import RAGPPOTrainer
-from trl import AutoModelForCausalLMWithValueHead, PPOConfig
+from trl import PPOConfig
 import os
 
-RAW_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
-DATA_PATH = "/home/v-zhaowan/zhaowang/data/rag-dpo/raw/train_rl.json"
-POLICY_MODEL_NAME = "/home/v-zhaowan/zhaowang/data/rag-dpo/model/sft"
-REWARD_MODEL_PATH = "/home/v-zhaowan/zhaowang/data/rag-dpo/model/rm"
+RAW_DATA_PATH = "/home/aiscuser/ds/zhaowang/data/rag-dpo/raw/musique_ans_v1.0_train.jsonl"
+DATA_PATH = "/home/aiscuser/ds/zhaowang/data/rag-dpo/raw/train_rl.json"
+POLICY_MODEL_NAME = "/home/aiscuser/ds/zhaowang/data/rag-dpo/model/sft"
+REWARD_MODEL_PATH = "/home/aiscuser/ds/zhaowang/data/rag-dpo/model/rm"
 E5_MODEL_NAME = 'intfloat/e5-large-v2'
 
-OUTPUT_DIR = "/home/v-zhaowan/zhaowang/rag/save/ppo/v1"
+OUTPUT_DIR = "/home/aiscuser/ds/zhaowang/rag/ppo/model/ppo/v1"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.environ["WANDB_PROJECT"] = "RAG-MCTS"
 
 EPOCHS = 3.0
 PER_DEVICE_TRAIN_BATCH_SIZE=1
-GRADIENT_ACCUMULATION_STEPS=1
+GRADIENT_ACCUMULATION_STEPS=4
 
 MAX_PPO_EPOCHS = 4
 NUM_MINI_BATCHES = 1
@@ -65,6 +65,27 @@ if __name__ == "__main__":
     if rm_tokenizer.pad_token is None: 
         rm_tokenizer.pad_token = rm_tokenizer.eos_token
     
+    value_model = AutoModelForSequenceClassification.from_pretrained(
+        REWARD_MODEL_PATH, 
+        dtype=torch.bfloat16,
+        trust_remote_code=True,
+        num_labels=1
+    )
+
+    reward_model = AutoModelForSequenceClassification.from_pretrained(
+        REWARD_MODEL_PATH, 
+        dtype=torch.bfloat16,
+        trust_remote_code=True,
+        num_labels=1
+    )
+
+    policy_model = AutoModelForCausalLM.from_pretrained(
+        POLICY_MODEL_NAME, 
+        dtype=torch.bfloat16,
+        trust_remote_code=True,
+        attn_implementation="flash_attention_2"
+    )
+
     lora_config = LoraConfig(
         r=16, 
         lora_alpha=32, 
@@ -74,30 +95,15 @@ if __name__ == "__main__":
         task_type="CAUSAL_LM"
     )
 
-    policy_model = AutoModelForCausalLMWithValueHead.from_pretrained(
-        POLICY_MODEL_NAME, 
-        torch_dtype=torch.bfloat16, 
-        trust_remote_code=True, 
-        peft_config=lora_config,
-        attn_implementation="flash_attention_2"
-    )
-    policy_model.generation_config = policy_model.pretrained_model.generation_config
-    
-    reward_model = AutoModelForSequenceClassification.from_pretrained(
-        REWARD_MODEL_PATH, 
-        torch_dtype=torch.bfloat16, 
-        num_labels=1
-    )
-    reward_model.eval()
-
     print("Loading SentenceTransformer model for Retriever...")
     similarity_model = SentenceTransformer(E5_MODEL_NAME)
 
     config = PPOConfig(
-        learning_rate=LEARNING_RATE,
-        num_train_epochs=EPOCHS,
+        output_dir=OUTPUT_DIR,
         per_device_train_batch_size=PER_DEVICE_TRAIN_BATCH_SIZE,
         gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
+        learning_rate=LEARNING_RATE,
+        num_train_epochs=EPOCHS,
         num_mini_batches=NUM_MINI_BATCHES,
         num_ppo_epochs=MAX_PPO_EPOCHS,
         gamma=1.0,
@@ -106,12 +112,14 @@ if __name__ == "__main__":
         cliprange_value=0.2,
         vf_coef=0.1,
         kl_coef=0.1,
-        remove_unused_columns=False,
-        output_dir=OUTPUT_DIR,
+        logging_steps=10,
+        save_strategy="steps",
+        save_steps=50,
+        bf16=True,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False}, 
         report_to="wandb",
         exp_name="ppo-v1",
-        save_steps=50,
-        logging_steps=10
     )
 
     trainer = RAGPPOTrainer(
@@ -121,8 +129,9 @@ if __name__ == "__main__":
         data_collator=simple_data_collator,
         ref_model=None,
         reward_model=reward_model,
+        value_model=value_model,
         train_dataset=train_dataset,
-        value_model=policy_model.pretrained_model,
+        peft_config=lora_config,
         reward_tokenizer=rm_tokenizer, 
         retrieval_model=similarity_model
     )
