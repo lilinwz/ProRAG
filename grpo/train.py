@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForSequen
 from sentence_transformers import SentenceTransformer
 from peft import LoraConfig
 from trl import GRPOConfig
-from rag_trainer import RAGTrainer
+from trainer import RAGTrainer
 import os
 
 RAW_DATA_PATH = "/home/aiscuser/ds/zhaowang/data/rag-dpo/raw/musique_ans_v1.0_train.jsonl"

@@ -1,6 +1,5 @@
-wiki/
 data/
 save/
-retrieval/bm25/
+test/results
 rm/wandb
 ppo/wandb

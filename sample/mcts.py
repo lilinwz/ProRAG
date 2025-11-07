@@ -3,30 +3,39 @@ import re
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, StoppingCriteria, StoppingCriteriaList, AutoModelForSequenceClassification
 from sentence_transformers import SentenceTransformer, util
-from rank_bm25 import BM25Okapi
 from tqdm import tqdm
 import numpy as np
 import math
 import collections
 from typing import List
 
-LORA_PATH = "/home/v-zhaowan/zhaowang/rag/save/final_course/final_adapter"
-RAW_DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
-DATA_PATH = "/home/v-zhaowan/zhaowang/rag/data/raw/train_rl.json"
-OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/data_mcts_1500.json"
-
-DATA_START = 1000
-DATA_LENGTH = 500
-NUM_SIMULATIONS = 50
-EXPANSION_WIDTH_K = 5
-MAX_SEARCH_DEPTH = 6
-C_PUCT = 2.5
-LENGTH_PENALTY = 0.1
-
-MAX_MODEL_INPUT_LENGTH = 2048
-MAX_GENERATION_LENGTH = 512
+MODEL_PATH = "/home/aiscuser/ds/zhaowang/rag/save/sft/checkpoint-770"
+DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/2wiki/train.jsonl"
+OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/tree.json"
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+NUM_TREES = 5000
+NUM_SIMULATIONS = 50
+EXPANSION_WIDTH_K = 5
+MAX_SEARCH_DEPTH = 20
+C_PUCT = 2.5
+LENGTH_PENALTY = 0.9
+
+MAX_MODEL_INPUT_LENGTH = 2048
+MAX_GENERATION_LENGTH = 1024
+
+INSTRUCTION_TEMPLATE = """You are an assistant tasked with answering user questions by following a step-by-step reasoning process. Structure your entire response using the following special tokens and rules:
+- `<step>...</step>`: Use this to explain the logical reasoning for each step in your process. Each step should bring you closer to solving the user's query.
+- `<subquery>...</subquery>`: This block contains a specific question or sub-question that needs to be answered in order to progress. This is part of your reasoning, so make sure the subquery is clear and answerable.
+- `<retrieval>...</retrieval>`: This block contains information retrieved from external sources (such as a search engine) that help answer the subquery. It can contain factual data or direct quotes.
+- `<subanswer>...</subanswer>`: This block contains the answer to the preceding subquery. It's the most direct, concise answer that results from the retrieval.
+- `<answer>...</answer>`: This is the final, conclusive answer to the user's main question, derived by combining the steps and subanswers.
+
+Now, use this structure to answer the following user question:
+
+User Question: {question}
+"""
 
 print("Loading SentenceTransformer model...")
 E5_MODEL_NAME = 'intfloat/e5-large-v2'
@@ -48,64 +57,60 @@ def get_nli_score(premise: str, hypothesis: str) -> float:
     return probs[:, 0].item()+probs[:, 2].item()
 
 class StopOnKeywords(StoppingCriteria):
-    def __init__(self, tokenizer, stop_tokens):
+    def __init__(self, tokenizer, stop_tokens: List[str], lookback_tokens: int=3):
         self.tokenizer = tokenizer
-        self.stop_token_ids = []
-        for token in stop_tokens:
-            ids = tokenizer.encode(token, add_special_tokens=False)
-            if ids:
-                self.stop_token_ids.append(ids[0])
+        self.stop_tokens = stop_tokens
+        self.lookback_tokens = lookback_tokens
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        if input_ids.shape[-1] > 0 and input_ids[0, -1].item() in self.stop_token_ids:
-            return True
+        if input_ids.shape[-1] == 0:
+            return False
+        last_ids = input_ids[0, -self.lookback_tokens:].tolist()
+        decoded = self.tokenizer.decode(last_ids, skip_special_tokens=False, clean_up_tokenization_spaces=True)
+        for tok in self.stop_tokens:
+            if decoded.endswith(tok):
+                return True
         return False
 
 class E5VectorRetriever:
     def __init__(self, paragraphs: List[dict], model: SentenceTransformer):
-        self.raw_paragraphs = paragraphs
+        self.raw_paragraphs = paragraphs or []
         self.model = model
-        
-        self.corpus = [f'passage: {p.get("paragraph_text", "")}' for p in paragraphs]
+        self.corpus = [f'title: {p[0]}\npassage: {"\n".join(str(s) for s in p[1])}' for p in self.raw_paragraphs]
         if not self.corpus:
             self.corpus_embeddings = None
             return
-
-        self.corpus_embeddings = self.model.encode(
-            self.corpus, 
-            convert_to_tensor=True, 
-            show_progress_bar=False
-        ).to(DEVICE)
+        emb = self.model.encode(self.corpus, convert_to_tensor=False, show_progress_bar=False)
+        if hasattr(emb, "cpu"):
+            emb = emb.cpu().numpy()
+        self.corpus_embeddings = np.asarray(emb, dtype=np.float32)
+        norms = np.linalg.norm(self.corpus_embeddings, axis=1, keepdims=True) + 1e-12
+        self.corpus_embeddings = self.corpus_embeddings / norms
 
     def retrieve(self, query: str, top_k: int = 3) -> List[str]:
         if self.corpus_embeddings is None or not query:
             return []
-
-        query_with_prefix = f'query: {query}'
-        query_embedding = self.model.encode(query_with_prefix, convert_to_tensor=True).to(DEVICE)
-        
-        query_embedding = torch.nn.functional.normalize(query_embedding, p=2, dim=0)
-        corpus_embeddings_norm = torch.nn.functional.normalize(self.corpus_embeddings, p=2, dim=1)
-        
-        cos_scores = torch.mm(query_embedding.unsqueeze(0), corpus_embeddings_norm.transpose(0, 1))[0]
-        top_results = torch.topk(cos_scores, k=min(top_k, len(self.corpus)))
-
-        retrieved_docs_with_info = []
-        for score, idx in zip(top_results[0], top_results[1]):
-            paragraph = self.raw_paragraphs[idx]
-            retrieved_docs_with_info.append(
-                f"Document {paragraph['idx']} (Title: {paragraph['title']}): "
-                f"{paragraph['paragraph_text']}"
-            )
-        
-        return retrieved_docs_with_info
+        q = f'query: {query}'
+        q_emb = self.model.encode(q, convert_to_tensor=False, show_progress_bar=False)
+        if hasattr(q_emb, "cpu"):
+            q_emb = q_emb.cpu().numpy()
+        q_emb = np.asarray(q_emb, dtype=np.float32)
+        q_emb = q_emb / (np.linalg.norm(q_emb) + 1e-12)
+        scores = np.dot(self.corpus_embeddings, q_emb)
+        k = min(top_k, self.corpus_embeddings.shape[0])
+        idxs = np.argsort(-scores)[:k]
+        docs = []
+        for idx in idxs:
+            p = self.raw_paragraphs[int(idx)]
+            docs.append(f"Document {p.get('idx','?')} (Title: {p.get('title','')}): {p.get('paragraph_text','')}")
+        return docs
 
 def generate(model, tokenizer, prompt, do_sample=True, max_gen_len=MAX_GENERATION_LENGTH):
     input_ids = tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False).to(model.device)
-    if input_ids.shape[1] > MAX_MODEL_INPUT_LENGTH:
-        input_ids = input_ids[:, -MAX_MODEL_INPUT_LENGTH:]
-    stop_tokens = ["<retrieval>", "<|im_end|>"]
+    
+    stop_tokens = ["<retrieval>", "</subanswer>", "<|im_end|>", "<|endoftext|>"]
     stopping_criteria = StoppingCriteriaList([StopOnKeywords(tokenizer, stop_tokens)])
+
     with torch.no_grad():
         gen_output_ids = model.generate(
             input_ids=input_ids,
@@ -119,24 +124,6 @@ def generate(model, tokenizer, prompt, do_sample=True, max_gen_len=MAX_GENERATIO
         )
     response = tokenizer.decode(gen_output_ids[0, input_ids.shape[1]:], skip_special_tokens=False)
     return response
-
-def calculate_f1_score(prediction: str, ground_truth: str) -> float:
-    prediction_tokens = prediction.lower().split()
-    ground_truth_tokens = ground_truth.lower().split()
-    
-    if not prediction_tokens or not ground_truth_tokens:
-        return 0.0
-
-    common = collections.Counter(prediction_tokens) & collections.Counter(ground_truth_tokens)
-    num_same = sum(common.values())
-
-    if num_same == 0:
-        return 0.0
-
-    precision = 1.0 * num_same / len(prediction_tokens)
-    recall = 1.0 * num_same / len(ground_truth_tokens)
-    f1 = (2 * precision * recall) / (precision + recall)
-    return f1
 
 class Node:
     def __init__(self, state, parent=None, action=None, prior=0.0, depth=0):
@@ -164,11 +151,13 @@ class Node:
                 best_child = child
         return best_child
 
-    def backpropagate(self, reward):
+    def backpropagate(self, init_reward):
         node = self
+        reward = init_reward
         while node is not None:
             node.N += 1
             node.Q += reward
+            reward = reward * LENGTH_PENALTY
             node = node.parent
 
 class MCTS:
@@ -210,18 +199,24 @@ class MCTS:
         key_actions = {}
         for action in actions:
             answer_match = re.search(r"<answer>(.*?)</answer>", action, re.DOTALL)
+            subanswer_match = re.search(r"<subanswer>(.*?)</subanswer>", action, re.DOTALL)
+            subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)
             if answer_match:
                 key = answer_match.group(1).strip()
+            elif subquery_match:   
+                key = subquery_match.group(1).strip()
+            elif subanswer_match:      
+                key = subanswer_match.group(1).strip()
             else:
-                subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL)            
-                key = subquery_match.group(1).strip() if subquery_match else action
+                continue
             if key not in key_actions:
                 key_actions[key] = action
 
         for key, action in key_actions.items():
             subquery_match = re.search(r"<subquery>(.*?)</subquery>", action, re.DOTALL) 
+            subanswer_match = re.search(r"<subanswer>(.*?)</subanswer>", action, re.DOTALL) 
             answer_match = re.search(r"<answer>(.*?)</answer>", action, re.DOTALL)
-            if not subquery_match and answer_match:
+            if not subquery_match and subanswer_match and answer_match:
                 next_state = node.state + action
                 prior_score = 0.5
                 child = Node(state=next_state, parent=node, action=action, prior=prior_score, depth=node.depth + 1)
@@ -288,23 +283,13 @@ class MCTS:
 
     def _compute_terminal_reward(self, state):
         answer_match = re.search(r"<answer>(.*?)</answer>", state, re.DOTALL)
-        f1_score = 0.0
+        em_score = 0.0
 
         if answer_match:
             extracted_answer = answer_match.group(1).strip()
-            if extracted_answer and self.final_answer:
-                scores = [calculate_f1_score(extracted_answer, ans) for ans in self.final_answer if ans]
-                if scores:
-                    f1_score = max(scores)
+            em_score = 1.0 if extracted_answer.strip().lower() == self.final_answer.strip().lower()
 
-        if f1_score >= 0.9:
-            return f1_score
-        else:
-            length = state.count("<step>")
-            final_reward = f1_score - LENGTH_PENALTY * length
-            if f1_score < 0.1 and length >= MAX_SEARCH_DEPTH:
-                return -0.5
-            return max(-1.0, final_reward)
+        return em_score
 
     def _node_to_dict(self, node: Node) -> dict:
         if node is None:
@@ -327,24 +312,17 @@ if __name__ == "__main__":
     print("Loading generator model and tokenizer...")
     model_name = "Qwen/Qwen3-8B"
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    custom_special_tokens = ["<step>", "</step>", "<subquery>", "</subquery>", "<retrieval>", "</retrieval>", "<subanswer>", "</subanswer>", "<answer>", "</answer>"]
-    tokenizer.add_special_tokens({"additional_special_tokens": custom_special_tokens})
-    base_model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
-    base_model.resize_token_embeddings(len(tokenizer))
-    from peft import PeftModel
-    model = PeftModel.from_pretrained(base_model, LORA_PATH)
-    model = model.merge_and_unload()
+    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
     model.eval()
 
     print("Loading and preparing data...")
-    raw_data = []
-    with open(RAW_DATA_PATH, 'r', encoding='utf-8') as f:
-        for line in f:
-            item = json.loads(line)
-            raw_data.append(item)
-
+    data = []
     with open(DATA_PATH, 'r', encoding='utf-8') as f:
-        data = json.load(f)[DATA_START: DATA_START+DATA_LENGTH]
+        for idx, line in enumerate(f):
+            if idx >= NUM_TREES:
+                break
+            item = json.loads(line)
+            data.append(item)
 
     try:
         with open(OUTPUT_PATH, 'r', encoding='utf-8') as f:
@@ -357,26 +335,18 @@ if __name__ == "__main__":
     processed_ids = {sample['id'] for sample in new_data}
 
     for sample in tqdm(data, desc="Sampling with MCTS"):
-        idx = sample["id"]
+        idx = sample["_id"]
         if idx in processed_ids:
             continue
-            
-        item = raw_data[idx]
-        if not item:
-            print(f"Warning: ID {idx} not found in raw data. Skipping.")
-            continue
 
-        question = item["question"]
-        final_answer = [item.get("answer", "")]
-        final_answer.extend(item.get("answer_aliases", []))
-        if not final_answer:
-            print(f"Warning: No answer for ID {idx}. Skipping.")
-            continue
+        question = sample["question"]
+        answer = sample["answer"]
         
-        init_prompt = f"<|im_start|>user\n{question}<|im_end|>\n<|im_start|>assistant\n<step>\n"
-        retriever = E5VectorRetriever(item["paragraphs"], similarity_model)
+        user_content = INSTRUCTION_TEMPLATE.format(question=question)
+        init_prompt = f"<|im_start|>user\n{user_content}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n"
+        retriever = E5VectorRetriever(sample["context"], similarity_model)
 
-        mcts = MCTS(model, tokenizer, retriever, init_prompt, question, final_answer)
+        mcts = MCTS(model, tokenizer, retriever, init_prompt, question, answer)
         mcts.run()
         search_tree = mcts.get_search_tree()
     
@@ -384,7 +354,7 @@ if __name__ == "__main__":
             "id": idx,
             "question": question,
             "mcts_tree": search_tree,
-            "answer": final_answer
+            "answer": answer
         })
 
         if len(new_data) % 10 == 0:

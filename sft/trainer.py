@@ -3,90 +3,169 @@ from torch.nn import CrossEntropyLoss
 from transformers import Trainer
 import numpy as np
 from collections import defaultdict
+import re
 
 class CustomTrainer(Trainer):
     def __init__(self, *args, **kwargs):
-        self.special_token_weight_config = kwargs.pop('special_token_weight', None)
         super().__init__(*args, **kwargs)
 
         default_weight = 1.0
         self.token_weights = {
-            "<answer>": 20.0, 
-            "</answer>": 20.0,
-            "<subquery>": 10.0, 
-            "</subquery>": 10.0,
-            "<subanswer>": 10.0, 
-            "</subanswer>": 10.0,
-            "<step>": 4.0, 
-            "</step>": 4.0,
-            "<retrieval>": 10.0, 
-            "</retrieval>": 10.0,
+            "<answer>": 5.0, 
+            "</answer>": 5.0,
+            "<subquery>": 3.0, 
+            "</subquery>": 3.0,
+            "<subanswer>": 3.0, 
+            "</subanswer>": 3.0,
+            "<step>": 2.0, 
+            "</step>": 2.0,
+            "<retrieval>": 3.0, 
+            "</retrieval>": 3.0,
         }
+        vocab_size = len(self.processing_class)
+        weights = torch.full((vocab_size,), default_weight, device=self.model.device)
 
-        weights = torch.full((self.model.config.vocab_size,), default_weight).to(self.model.device)
-
-        special_token_ids = []
+        self.special_token_map = {}
         for token_str, weight in self.token_weights.items():
-            token_id = self.tokenizer.convert_tokens_to_ids(token_str)
-            if token_id != self.tokenizer.unk_token_id:
+            token_id = self.processing_class.convert_tokens_to_ids(token_str)
+            if token_id != self.processing_class.unk_token_id:
                 weights[token_id] = weight
-                special_token_ids.append(token_id)
+                self.special_token_map[token_id] = token_str
         
         self.loss_fct = CrossEntropyLoss(weight=weights, ignore_index=-100)
 
-        self.special_token_map = {
-            self.tokenizer.convert_tokens_to_ids(token): token for token in self.token_weights.keys()
-        }
-
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
-        labels_for_eval = inputs.pop("labels_for_eval", None)
         labels = inputs.pop("labels")
-
         outputs = model(**inputs)
         logits = outputs.get("logits")
         
-        loss = self.loss_fct(logits.view(-1, self.model.config.vocab_size), labels.view(-1))
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+
+        if self.loss_fct.weight.device != shift_logits.device:
+            self.loss_fct.weight = self.loss_fct.weight.to(shift_logits.device)
+        if self.loss_fct.weight.dtype != shift_logits.dtype:
+            self.loss_fct.weight = self.loss_fct.weight.to(shift_logits.dtype)
+
+        loss = self.loss_fct(shift_logits.view(-1, self.model.config.vocab_size), shift_labels.view(-1))
         return (loss, outputs) if return_outputs else loss
     
+    @torch.no_grad()
     def evaluate(self, eval_dataset=None, ignore_keys=None, metric_key_prefix: str = "eval"):
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
+        dataloader = self.get_eval_dataloader(eval_dataset)
+        model = self.model
+        model.eval()
 
-        output = self.prediction_loop(
-            self.get_eval_dataloader(eval_dataset),
-            description="Evaluation",
-            prediction_loss_only=False,
-            ignore_keys=ignore_keys,
+        preds_texts, prompt_texts, losses = [], [], []
+        for batch in dataloader:
+            batch = self._prepare_inputs(batch)
+            labels = batch["labels"]
+            outputs = model(**batch)
+            logits = outputs.get("logits")
+
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            loss = self.loss_fct(
+                shift_logits.view(-1, self.model.config.vocab_size),
+                shift_labels.view(-1)
+            )
+            losses.append(loss.item())
+
+            input_ids = batch["input_ids"]
+            decoded_inputs = self.processing_class.batch_decode(input_ids, skip_special_tokens=False)
+            for text in decoded_inputs:
+                match = re.search(r"(<\|im_start\|>assistant\n<think>\n</think>\n)", text)
+                if match:
+                    prompt = text[:match.end()]
+                else:
+                    prompt = text
+                prompt_texts.append(prompt)
+
+            gen_inputs = self.processing_class(
+                prompt_texts,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=4096
+            ).to(model.device)
+
+            gen_outputs = model.generate(
+                **gen_inputs,
+                max_new_tokens=4096,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.9,
+                eos_token_id=self.processing_class.eos_token_id,
+                pad_token_id=self.processing_class.eos_token_id
+            )
+
+            gen_texts = self.processing_class.batch_decode(gen_outputs, skip_special_tokens=False)
+            preds_texts.extend(gen_texts)
+
+        avg_loss = np.mean(losses)
+        metrics = {f"{metric_key_prefix}_loss": avg_loss}
+
+        def check_format_correctness(text: str) -> bool:
+            tag_pattern = re.compile(r"</?\s*(step|subquery|retrieval|subanswer|answer)\s*>", flags=re.IGNORECASE)
+            tags_matches = list(tag_pattern.finditer(text))
+            if not tags_matches:
+                return False
+
+            tag_seq = []
+            for m in tags_matches:
+                raw = m.group(0)
+                name = m.group(1).lower()
+                is_closing = raw.strip().startswith("</")
+                tag_seq.append((is_closing, name))
+
+            stack = []
+            for is_closing, name in tag_seq:
+                if not is_closing:
+                    stack.append(name)
+                else:
+                    if not stack:
+                        return False
+                    top = stack.pop()
+                    if top != name:
+                        return False
+            if stack:
+                return False
+
+            opening_tags = [name for is_closing, name in tag_seq if not is_closing]
+            if not opening_tags:
+                return False
+
+            i = 0
+            n = len(opening_tags)
+            while i < n:
+                if opening_tags[i] != "step":
+                    return False
+                i += 1
+
+                if i < n and opening_tags[i] == "answer":
+                    return i == n - 1
+                expected_seq = ["subquery", "retrieval", "step", "subanswer"]
+                for expected in expected_seq:
+                    if i >= n or opening_tags[i] != expected:
+                        return False
+                    i += 1
+
+            return True
+
+        total = len(preds_texts)
+        correct = sum(1 for text in preds_texts if check_format_correctness(text))
+        format_acc = correct / total if total > 0 else 0.0
+
+        metrics[f"{metric_key_prefix}_format_acc"] = format_acc
+
+        report = (
+            "\n--- Format Evaluation Report ---\n"
+            f"Samples: {total} Correct format: {correct}/{total} ({format_acc:.2%})\n"
+            f"Sample: {preds_texts[0]}\n"
+            "--------------------------------\n"
         )
-
-        metrics = {}
-        if output.metrics is not None:
-             metrics[f"{metric_key_prefix}_loss"] = output.metrics.get('eval_loss')
-        
-        logits = output.predictions
-        labels = np.array(eval_dataset['labels']) 
-        preds = np.argmax(logits, axis=-1)
-
-        true_counts = defaultdict(int)
-        pred_counts = defaultdict(int)
-
-        for i in range(labels.shape[0]):
-            for j in range(labels.shape[1]):
-                label_token_id = labels[i, j]
-                pred_token_id = preds[i, j]
-
-                if label_token_id in self.special_token_map:
-                    true_counts[label_token_id] += 1
-                    
-                    if pred_token_id == label_token_id:
-                        pred_counts[label_token_id] += 1
-        
-        print("\n--- Special Token Accuracy Report ---")
-        for token_id, count in sorted(true_counts.items()):
-            token_str = self.special_token_map[token_id]
-            accuracy = (pred_counts[token_id] / count) if count > 0 else 0
-            metrics[f"{metric_key_prefix}_acc_{token_str}"] = accuracy
-            print(f"Token: {token_str:<12} | Accuracy: {accuracy:>7.2%} | Count: {count}")
-        print("-------------------------------------\n")
+        print(report)
 
         self.log(metrics)
         return metrics

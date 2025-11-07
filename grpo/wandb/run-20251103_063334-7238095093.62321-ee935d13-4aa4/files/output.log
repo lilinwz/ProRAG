@@ -1,0 +1,35 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/1500 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/home/aiscuser/ds/zhaowang/rag/grpo/train.py", line 105, in <module>
+    trainer.train()
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+    inputs = self._prepare_inputs(inputs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+    return func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+    generation_batch = self._generate_and_score_completions(generation_batch)
+  File "/home/aiscuser/ds/zhaowang/rag/grpo/trainer.py", line 201, in _generate_and_score_completions
+    gen_config = gen_config.copy()
+AttributeError: 'GenerationConfig' object has no attribute 'copy'
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/grpo/train.py", line 105, in <module>
+[rank0]:     trainer.train()
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+[rank0]:     inputs = self._prepare_inputs(inputs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+[rank0]:     generation_batch = self._generate_and_score_completions(generation_batch)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/grpo/trainer.py", line 201, in _generate_and_score_completions
+[rank0]:     gen_config = gen_config.copy()
+[rank0]: AttributeError: 'GenerationConfig' object has no attribute 'copy'
