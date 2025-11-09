@@ -7,11 +7,13 @@ from tqdm import tqdm
 import numpy as np
 import math
 import collections
-from typing import List
+from typing import List, Tuple
+import multiprocessing as mp
+import os
 
 MODEL_PATH = "/home/aiscuser/ds/zhaowang/rag/save/sft/checkpoint-770"
-DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/2wiki/train.jsonl"
-OUTPUT_PATH = "/home/v-zhaowan/zhaowang/rag/sample/tree.json"
+DATA_PATH = "/home/aiscuser/ds/zhaowang/rag/data/2wiki/train.jsonl"
+OUTPUT_PATH = "/home/aiscuser/ds/zhaowang/rag/sample/tree.json"
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -20,10 +22,13 @@ NUM_SIMULATIONS = 50
 EXPANSION_WIDTH_K = 5
 MAX_SEARCH_DEPTH = 20
 C_PUCT = 2.5
-LENGTH_PENALTY = 0.9
-
-MAX_MODEL_INPUT_LENGTH = 2048
+LENGTH_PENALTY = 0.97
+Gamma = 0.95
+MAX_MODEL_INPUT_LENGTH = 4096
 MAX_GENERATION_LENGTH = 1024
+
+NUM_GPUS = 4
+THREADS_PER_GPU = 3
 
 INSTRUCTION_TEMPLATE = """You are an assistant tasked with answering user questions by following a step-by-step reasoning process. Structure your entire response using the following special tokens and rules:
 - `<step>...</step>`: Use this to explain the logical reasoning for each step in your process. Each step should bring you closer to solving the user's query.
@@ -36,25 +41,6 @@ Now, use this structure to answer the following user question:
 
 User Question: {question}
 """
-
-print("Loading SentenceTransformer model...")
-E5_MODEL_NAME = 'intfloat/e5-large-v2'
-similarity_model = SentenceTransformer(E5_MODEL_NAME, device=DEVICE)
-
-print("Loading NLI model for answerability scoring...")
-NLI_MODEL_NAME = 'facebook/bart-large-mnli'
-nli_tokenizer = AutoTokenizer.from_pretrained(NLI_MODEL_NAME)
-nli_model = AutoModelForSequenceClassification.from_pretrained(NLI_MODEL_NAME).to(DEVICE)
-nli_model.eval()
-
-@torch.no_grad()
-def get_nli_score(premise: str, hypothesis: str) -> float:
-    if not premise or not hypothesis:
-        return 0.1
-    input_ids = nli_tokenizer.encode(premise, hypothesis, return_tensors='pt', truncation=True, max_length=512).to(nli_model.device)
-    logits = nli_model(input_ids).logits
-    probs = logits.softmax(dim=1)
-    return probs[:, 0].item()+probs[:, 2].item()
 
 class StopOnKeywords(StoppingCriteria):
     def __init__(self, tokenizer, stop_tokens: List[str], lookback_tokens: int=3):
@@ -73,10 +59,13 @@ class StopOnKeywords(StoppingCriteria):
         return False
 
 class E5VectorRetriever:
-    def __init__(self, paragraphs: List[dict], model: SentenceTransformer):
+    def __init__(self, paragraphs: List[Tuple[str, List[str]]], model: SentenceTransformer):
         self.raw_paragraphs = paragraphs or []
         self.model = model
-        self.corpus = [f'title: {p[0]}\npassage: {"\n".join(str(s) for s in p[1])}' for p in self.raw_paragraphs]
+        self.corpus = []
+        for p in self.raw_paragraphs:
+            passage_text = "\n".join(s for s in p[1])
+            self.corpus.append(f"title: {p[0]}\npassage: {passage_text}")
         if not self.corpus:
             self.corpus_embeddings = None
             return
@@ -102,8 +91,31 @@ class E5VectorRetriever:
         docs = []
         for idx in idxs:
             p = self.raw_paragraphs[int(idx)]
-            docs.append(f"Document {p.get('idx','?')} (Title: {p.get('title','')}): {p.get('paragraph_text','')}")
+            passage_text = "\n".join(s for s in p[1])
+            docs.append(f"Title: {p[0]}: {passage_text}")
         return docs
+
+def calculate_f1_score(prediction: str, ground_truth: str) -> float:
+    prediction_tokens = prediction.lower().split()
+    gt_tokens = ground_truth.lower().split()
+    if not prediction_tokens or not gt_tokens:
+        return 0.0
+    common = collections.Counter(prediction_tokens) & collections.Counter(gt_tokens)
+    num_same = sum(common.values())
+    prec = num_same / len(prediction_tokens)
+    rec = num_same / len(gt_tokens)
+    f1 = 2 * prec * rec / (prec + rec)
+    return f1
+
+@torch.no_grad()
+def get_nli_score(premise: str, hypothesis: str, nli_model, nli_tokenizer) -> float:
+    if not premise or not hypothesis:
+        return 0.1
+    input_ids = nli_tokenizer.encode(premise, hypothesis, return_tensors='pt', truncation=True, max_length=512).to(nli_model.device)
+    logits = nli_model(input_ids).logits
+    probs = logits.softmax(dim=1)
+    entail_prob = probs[:, 2].item()
+    return float(entail_prob)
 
 def generate(model, tokenizer, prompt, do_sample=True, max_gen_len=MAX_GENERATION_LENGTH):
     input_ids = tokenizer.encode(prompt, return_tensors="pt", add_special_tokens=False).to(model.device)
@@ -157,17 +169,20 @@ class Node:
         while node is not None:
             node.N += 1
             node.Q += reward
-            reward = reward * LENGTH_PENALTY
+            reward = reward * Gamma
             node = node.parent
 
 class MCTS:
-    def __init__(self, model, tokenizer, retriever, initial_prompt, question, final_answer):
+    def __init__(self, model, tokenizer, retriever, initial_prompt, question, final_answer, similarity_model, nli_model, nli_tokenizer):
         self.model = model
         self.tokenizer = tokenizer
         self.retriever = retriever
         self.root = Node(state=initial_prompt, depth=0)
         self.question = question
         self.final_answer = final_answer
+        self.similarity_model = similarity_model
+        self.nli_model = nli_model
+        self.nli_tokenizer = nli_tokenizer
         
     def run(self, num_simulations=NUM_SIMULATIONS):
         for _ in range(num_simulations):
@@ -254,22 +269,22 @@ class MCTS:
     def _heuristic_function(self, subquery, prev_state, question):
         try:
             with torch.no_grad():
-                subquery_embedding = similarity_model.encode(f'query: {subquery}', convert_to_tensor=True)
-                question_embedding = similarity_model.encode(f'query: {question}', convert_to_tensor=True)
+                subquery_embedding = self.similarity_model.encode(f'query: {subquery}', convert_to_tensor=True)
+                question_embedding = self.similarity_model.encode(f'query: {question}', convert_to_tensor=True)
                 score_rel = util.pytorch_cos_sim(subquery_embedding, question_embedding).item()
 
                 prev_subquery_match = re.findall(r"<subquery>(.*?)</subquery>", prev_state, re.DOTALL)
                 prev_subquery = prev_subquery_match[-1].strip() if prev_subquery_match else ""
                 
                 if prev_subquery:
-                    prev_subquery_embedding = similarity_model.encode(f'query: {prev_subquery}', convert_to_tensor=True)
+                    prev_subquery_embedding = self.similarity_model.encode(f'query: {prev_subquery}', convert_to_tensor=True)
                     score_red = util.pytorch_cos_sim(subquery_embedding, prev_subquery_embedding).item()
                 else:
                     score_red = 0.0
 
             retrieved_docs = self.retriever.retrieve(subquery, top_k=3)
             context = "\n".join(retrieved_docs)
-            score_ans = get_nli_score(premise=context, hypothesis=subquery)
+            score_ans = get_nli_score(premise=context, hypothesis=subquery, nli_model=self.nli_model, nli_tokenizer=self.nli_tokenizer)
             
             final_score = score_ans * 0.5 + max(0, score_rel - score_red) * 0.5
             
@@ -283,13 +298,13 @@ class MCTS:
 
     def _compute_terminal_reward(self, state):
         answer_match = re.search(r"<answer>(.*?)</answer>", state, re.DOTALL)
-        em_score = 0.0
-
+        f1 = 0.0
         if answer_match:
             extracted_answer = answer_match.group(1).strip()
-            em_score = 1.0 if extracted_answer.strip().lower() == self.final_answer.strip().lower()
-
-        return em_score
+            f1 = calculate_f1_score(extracted_answer, self.final_answer)
+        num_steps = state.count("<step>")
+        final_score = f1 * (LENGTH_PENALTY ** num_steps)
+        return final_score
 
     def _node_to_dict(self, node: Node) -> dict:
         if node is None:
@@ -308,37 +323,28 @@ class MCTS:
     def get_search_tree(self) -> dict:
         return self._node_to_dict(self.root)
 
-if __name__ == "__main__":
-    print("Loading generator model and tokenizer...")
-    model_name = "Qwen/Qwen3-8B"
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True)
+def worker_process(gpu_id, data_slice, output_list):
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    device = f"cuda:0" if torch.cuda.is_available() else "cpu"
+
+    print("Loading SentenceTransformer model...")
+    E5_MODEL_NAME = 'intfloat/e5-large-v2'
+    similarity_model = SentenceTransformer(E5_MODEL_NAME, device=device)
+
+    print("Loading NLI model for answerability scoring...")
+    NLI_MODEL_NAME = 'facebook/bart-large-mnli'
+    nli_tokenizer = AutoTokenizer.from_pretrained(NLI_MODEL_NAME)
+    nli_model = AutoModelForSequenceClassification.from_pretrained(NLI_MODEL_NAME).to(device)
+    nli_model.eval()
+    
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_PATH, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True
+    )
     model.eval()
 
-    print("Loading and preparing data...")
-    data = []
-    with open(DATA_PATH, 'r', encoding='utf-8') as f:
-        for idx, line in enumerate(f):
-            if idx >= NUM_TREES:
-                break
-            item = json.loads(line)
-            data.append(item)
-
-    try:
-        with open(OUTPUT_PATH, 'r', encoding='utf-8') as f:
-            new_data = json.load(f)
-        print(f"Resuming from {len(new_data)} saved samples.")
-    except:
-        new_data = []
-        print("Starting a new sampling process.")
-    
-    processed_ids = {sample['id'] for sample in new_data}
-
-    for sample in tqdm(data, desc="Sampling with MCTS"):
+    for sample in data_slice:
         idx = sample["_id"]
-        if idx in processed_ids:
-            continue
-
         question = sample["question"]
         answer = sample["answer"]
         
@@ -346,22 +352,55 @@ if __name__ == "__main__":
         init_prompt = f"<|im_start|>user\n{user_content}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n"
         retriever = E5VectorRetriever(sample["context"], similarity_model)
 
-        mcts = MCTS(model, tokenizer, retriever, init_prompt, question, answer)
+        mcts = MCTS(model, tokenizer, retriever, init_prompt, question, answer, similarity_model, nli_model, nli_tokenizer)
         mcts.run()
         search_tree = mcts.get_search_tree()
-    
-        new_data.append({
+        
+        output_list.append({
             "id": idx,
             "question": question,
             "mcts_tree": search_tree,
             "answer": answer
         })
 
-        if len(new_data) % 10 == 0:
-            print(f"\nSaving progress at {len(new_data)} samples...")
-            with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-                json.dump(new_data, f, ensure_ascii=False, indent=4)
+if __name__ == "__main__":
+    # Load data
+    data = []
+    with open(DATA_PATH, 'r', encoding='utf-8') as f:
+        for idx, line in enumerate(f):
+            if idx >= NUM_TREES:
+                break
+            data.append(json.loads(line))
+    
+    try:
+        with open(OUTPUT_PATH, 'r', encoding='utf-8') as f:
+            existing_data = json.load(f)
+        print(f"Resuming from {len(existing_data)} saved samples.")
+    except:
+        existing_data = []
 
-    print("Final saving...")
+    processed_ids = {sample['id'] for sample in existing_data}
+    data = [x for x in data if x["_id"] not in processed_ids]
+
+    manager = mp.Manager()
+    output_list = manager.list()
+    num_processes = NUM_GPUS * THREADS_PER_GPU
+    chunk_size = math.ceil(len(data) / num_processes)
+    processes = []
+
+    for i in range(num_processes):
+        gpu_id = i % NUM_GPUS
+        chunk = data[i*chunk_size : (i+1)*chunk_size]
+        if not chunk:
+            continue
+        p = mp.Process(target=worker_process, args=(gpu_id, chunk, output_list))
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()
+
+    final_data = existing_data + list(output_list)
     with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-        json.dump(new_data, f, ensure_ascii=False, indent=4)
+        json.dump(final_data, f, ensure_ascii=False, indent=4)
+    print(f"Saved {len(final_data)} samples.")

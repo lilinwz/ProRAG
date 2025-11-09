@@ -238,8 +238,8 @@ def main():
 
     print(f"\nSaving all results to {OUTPUT_RESULTS_FILE}...")
     with open(OUTPUT_RESULTS_FILE, 'w', encoding='utf-8') as f:
-        for result in results:
-            f.write(json.dumps(result) + '\n')
+        for rr in result:
+            f.write(json.dumps(rr) + '\n')
 
 if __name__ == "__main__":
     main()
