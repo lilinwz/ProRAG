@@ -133,7 +133,7 @@ def run_rag_inference(model, tokenizer, question: str, retriever: E5VectorRetrie
         prompt += part
         trace += part
         if "<answer>" in part:
-            match = re.search(r"<answer>(.*?)</answer>", part, re.DOTALL)
+            match = re.search(r"<answer>\n(.*?)</answer>", part, re.DOTALL)
             if match:
                 final_answer = match.group(1).strip()
             break

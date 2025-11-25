@@ -1,1 +1,0 @@
-{"_step":1,"train/global_step":0,"profiling/Time taken: RAGTrainer._prepare_inputs":42420.773557550274,"_timestamp":1.762036713360117e+09,"profiling/Time taken: RAGTrainer._get_per_token_logps_and_entropies":5.1693008919246495,"_wandb":{"runtime":42426},"_runtime":42426}

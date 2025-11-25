@@ -1,9 +1,0 @@
-/home/v-zhaowan/miniconda3/envs/rag_ppo/lib/python3.10/site-packages/trl/trainer/ppo_trainer.py:273: UserWarning: No dataset is provided. Make sure to set config.batch_size to the correct value before training.
-  warnings.warn(
---- Epoch 1/1 ---
-100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1000/1000 [00:00<00:00, 695111.70it/s]
-Training finished. Saving the final PPO model (LoRA weights)...
-Traceback (most recent call last):
-  File "/home/v-zhaowan/zhaowang/rag/ppo/train.py", line 259, in <module>
-    ppo_trainer.save_model(PPO_OUTPUT_DIR)
-AttributeError: 'PPOTrainer' object has no attribute 'save_model'

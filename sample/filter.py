@@ -1,172 +1,208 @@
 import json
 import re
-import numpy as np
-import collections
-from typing import List, Dict, Any, Tuple
+import sys
+import os
 
-# --- 辅助函数 (与之前版本相同) ---
-def calculate_f1_score(prediction: str, ground_truth: str) -> float:
-    prediction_tokens = prediction.lower().split()
-    ground_truth_tokens = ground_truth.lower().split()
-    if not prediction_tokens or not ground_truth_tokens: return 0.0
-    common = collections.Counter(prediction_tokens) & collections.Counter(ground_truth_tokens)
-    num_same = sum(common.values())
-    if num_same == 0: return 0.0
-    precision = 1.0 * num_same / len(prediction_tokens)
-    recall = 1.0 * num_same / len(ground_truth_tokens)
-    f1 = (2 * precision * recall) / (precision + recall)
-    return f1
-
-def get_full_state_from_path(path: List[Dict]) -> str:
-    state_parts = [node.get('action') for node in path if node.get('action')]
-    return "".join(state_parts)
-
-def find_all_terminal_paths(node: Dict, current_path: List[Dict], all_paths: List[List[Dict]]):
-    current_path.append(node)
-    if not node.get('children'):
-        all_paths.append(list(current_path))
-    else:
-        for child in node['children']:
-            find_all_terminal_paths(child, current_path, all_paths)
-    current_path.pop()
-
-def analyze_diversity_recursively(node: Dict) -> Tuple[float, float, int]:
-    if not node.get('children') or len(node.get('children', [])) < 2:
-        return 0.0, 0.0, 0
-    total_q_n_variance, total_n_entropy, nodes_with_siblings_count = 0.0, 0.0, 1
-    children = node['children']
-    sibling_q_n = [child['q'] / child['n'] if child['n'] > 0 else 0 for child in children]
-    sibling_n = [child['n'] for child in children]
-    total_q_n_variance += np.var(sibling_q_n)
-    total_visits = sum(sibling_n)
-    if total_visits > 0:
-        probs = np.array([n / total_visits for n in sibling_n if n > 0])
-        total_n_entropy += -np.sum(probs * np.log2(probs))
-    for child in children:
-        var, entropy, count = analyze_diversity_recursively(child)
-        total_q_n_variance += var
-        total_n_entropy += entropy
-        nodes_with_siblings_count += count
-    return total_q_n_variance, total_n_entropy, nodes_with_siblings_count
-
-def analyze_tree_quality(tree: Dict, ground_truth_answers: List[str]) -> Dict[str, Any]:
-    if not tree or not tree.get('children'):
-        return {"error": "Tree is empty or has no children."}
-    all_paths = []
-    find_all_terminal_paths(tree, [], all_paths)
-    best_path, max_f1 = None, -1.0
-    for path in all_paths:
-        full_state = get_full_state_from_path(path)
-        answer_match = re.search(r"<answer>(.*?)</answer>", full_state, re.DOTALL)
-        if answer_match:
-            extracted_answer = answer_match.group(1).strip()
-            scores = [calculate_f1_score(extracted_answer, ans) for ans in ground_truth_answers if ans]
-            current_f1 = max(scores) if scores else 0.0
-            if current_f1 > max_f1:
-                max_f1 = current_f1
-                best_path = path
-    metrics = {'max_f1': max_f1}
-    total_var, total_ent, count = analyze_diversity_recursively(tree)
-    metrics['avg_sibling_q_n_variance'] = total_var / count if count > 0 else 0.0
-    return metrics
-
-# --- 新增的核心筛选逻辑 ---
-
-def apply_filters(metrics: Dict, tree_root: Dict, thresholds: Dict) -> Tuple[bool, str]:
+def validate_cot_logic(full_text: str) -> dict:
     """
-    根据预设的阈值对树的分析指标进行筛选。
-    返回一个元组 (是否通过, 失败原因)。
+    状态机逻辑：
+    1. 验证标签闭合性（允许 <retrieval> 在结尾不闭合）。
+    2. 验证流转逻辑：Step -> Subquery -> Retrieval -> Step ...
     """
-    # 规则 1: 最终答案质量必须达标
-    if metrics['max_f1'] < thresholds['MIN_F1_SCORE']:
-        return False, f"F1分数过低 ({metrics['max_f1']:.2f})"
+    result = {"valid": False, "error": ""}
 
-    # 规则 2: 必须有最基本的探索，不能是一条路走到黑
-    if len(tree_root.get('children', [])) < thresholds['MIN_ROOT_CHILDREN']:
-        return False, "根节点探索不足 (子节点 < 2)"
+    # 1. 提取所有标签
+    tags_raw = re.findall(r'<(/?)(\w+)>', full_text)
 
-    # 规则 3: 树必须能有效区分不同选择的优劣
-    if metrics['avg_sibling_q_n_variance'] < thresholds['MIN_AVG_Q_N_VARIANCE']:
-        return False, f"Q/N方差过低 ({metrics['avg_sibling_q_n_variance']:.4f})"
+    if not tags_raw:
+        result["error"] = "No tags found in text."
+        return result
 
-    # 如果所有检查都通过
-    return True, "通过筛选"
+    # 2. 验证标签闭合性 & 提取纯净序列
+    clean_sequence = []
+    i = 0
+    while i < len(tags_raw):
+        slash, name = tags_raw[i]
 
-def main(input_path: str, output_path: str):
-    """主函数，加载、分析、筛选并保存结果。"""
-    
-    # --- 在这里配置你的筛选标准 ---
-    FILTER_THRESHOLDS = {
-        # 规则1: 最高F1分数必须高于此值，否则认为搜索失败。
-        "MIN_F1_SCORE": 0.1,
-        
-        # 规则2: 根节点的孩子数量必须大于等于此值，以确保进行了基本的探索。
-        "MIN_ROOT_CHILDREN": 2,
-        
-        # 规则3: 兄弟节点Q/N值的平均方差必须高于此值，确保树具有分辨能力。
-        # 一个非常低的值意味着所有选项看起来都差不多，模型没学到什么。
-        "MIN_AVG_Q_N_VARIANCE": 0.01
-    }
+        # 如果遇到的是闭合标签（如 </step>）却出现在开始位置，报错
+        if slash == '/':
+            result["error"] = f"Unexpected closing tag </{name}> found without start tag."
+            return result
 
-    try:
-        with open(input_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        print(f"错误：找不到输入文件 {input_path}")
-        return
-    except json.JSONDecodeError:
-        print(f"错误：文件 {input_path} 不是有效的 JSON 格式。")
-        return
+        # 检查是否是列表中的最后一个标签
+        is_last_tag = (i + 1 >= len(tags_raw))
 
-    passed_items = []
-    failure_reasons = []
-
-    for item in data:
-        if 'mcts_tree' in item and item['mcts_tree']:
-            metrics = analyze_tree_quality(item['mcts_tree'], item.get('answer', []))
-            
-            if "error" in metrics:
-                failure_reasons.append("树结构错误或为空")
-                continue
-
-            is_passed, reason = apply_filters(metrics, item['mcts_tree'], FILTER_THRESHOLDS)
-            
-            if is_passed:
-                passed_items.append(item)
+        if is_last_tag:
+            # === 特殊逻辑修改处 ===
+            # 如果是最后一个标签，且是 retrieval，允许不闭合
+            if name == "retrieval":
+                clean_sequence.append(name)
+                break # 验证结束，进入流转检查
             else:
-                failure_reasons.append(reason)
+                # 其他标签（如 step, subquery）在结尾必须闭合，否则报错
+                result["error"] = f"Unclosed tag <{name}> at the end of text."
+                return result
+        
+        # 如果不是最后一个，检查下一个是否是对应的闭合标签
+        next_slash, next_name = tags_raw[i+1]
 
-    # --- 打印总结报告 ---
-    total_count = len(data)
-    passed_count = len(passed_items)
-    failed_count = total_count - passed_count
+        if next_slash == '/':
+            # 是闭合标签，检查名字是否匹配
+            if name != next_name:
+                result["error"] = f"Tag mismatch: <{name}> closed by </{next_name}>."
+                return result
+            # 匹配成功，加入序列
+            clean_sequence.append(name)
+            i += 2
+        else:
+            # 下一个不是闭合标签（即连续两个开始标签，如 <step><subquery>），视为嵌套或未闭合错误
+            result["error"] = f"Missing closing tag for <{name}> before <{next_name}> starts."
+            return result
+
+    # 3. 状态机流转检查 (逻辑保持不变)
+    last_tag = None
     
-    print("=" * 80)
-    print("MCTS 树筛选报告")
-    print("=" * 80)
-    print(f"总共处理树的数量: {total_count}")
-    print(f"通过筛选的数量:   {passed_count} ({passed_count/total_count:.2%})")
-    print(f"被淘汰的数量:     {failed_count} ({failed_count/total_count:.2%})")
-    print("-" * 80)
+    for idx, curr in enumerate(clean_sequence):
+        # --- Step ---
+        if curr == "step":
+            if last_tag is None or last_tag == "subanswer":
+                pass # Outer Step
+            elif last_tag == "retrieval":
+                pass # Inner Step
+            else:
+                result["error"] = f"Flow Error: <step> cannot follow <{last_tag}>. Expected Start, <subanswer>, or <retrieval>."
+                return result
+
+        # --- Subquery ---
+        elif curr == "subquery":
+            if last_tag != "step":
+                result["error"] = f"Flow Error: <subquery> must follow <step>, but found <{last_tag}>."
+                return result
+            # 检查前一个 Step 是否是 Outer Step (即 Step 前面不能是 retrieval)
+            prev_prev = clean_sequence[idx-2] if idx >= 2 else None
+            if prev_prev == "retrieval":
+                result["error"] = "Flow Error: <subquery> cannot follow an Inner Step. Expecting <subanswer>."
+                return result
+
+        # --- Retrieval ---
+        elif curr == "retrieval":
+            if last_tag != "subquery":
+                result["error"] = f"Flow Error: <retrieval> must follow <subquery>, but found <{last_tag}>."
+                return result
+
+        # --- Subanswer ---
+        elif curr == "subanswer":
+            if last_tag != "step":
+                result["error"] = f"Flow Error: <subanswer> must follow <step>, but found <{last_tag}>."
+                return result
+            # 检查前一个 Step 是否是 Inner Step (即 Step 前面必须是 retrieval)
+            prev_prev = clean_sequence[idx-2] if idx >= 2 else None
+            if prev_prev != "retrieval":
+                result["error"] = "Flow Error: <subanswer> must follow an Inner Step (Step after retrieval)."
+                return result
+
+        # --- Answer ---
+        elif curr == "answer":
+            if last_tag != "step":
+                result["error"] = f"Flow Error: <answer> must follow <step>, but found <{last_tag}>."
+                return result
+            # 检查前一个 Step 是否是 Outer Step
+            prev_prev = clean_sequence[idx-2] if idx >= 2 else None
+            if prev_prev == "retrieval":
+                result["error"] = "Flow Error: <answer> cannot follow an Inner Step. Expecting <subanswer>."
+                return result
+
+        else:
+            result["error"] = f"Unknown tag type: <{curr}>"
+            return result
+        
+        last_tag = curr
+
+    result["valid"] = True
+    return result
+
+def filter_file(input_filename, output_filename):
+    print(f"Filtering {input_filename}...")
+    print(f"Output will be saved to {output_filename}\n")
     
-    if failed_count > 0:
-        print("淘汰原因分析:")
-        reason_counts = collections.Counter(failure_reasons)
-        for reason, count in reason_counts.most_common():
-            print(f"  - {reason:<30}: {count:>5} 次")
-    print("=" * 80)
+    total_lines = 0
+    kept_lines = 0
+    skipped_lines = 0
+    
+    try:
+        with open(input_filename, 'r', encoding='utf-8') as f_in, \
+             open(output_filename, 'w', encoding='utf-8') as f_out:
+            
+            for line_num, line in enumerate(f_in, 1):
+                if not line.strip():
+                    continue
+                total_lines += 1
+                
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    print(f"[Line {line_num}] [Skipped] JSON Decode Error")
+                    skipped_lines += 1
+                    continue
+                
+                # 提取字段
+                history = data.get('input', {}).get('history', "")
+                chosen_data = data.get('chosen', {})
+                new_step = chosen_data.get('new_step', "")
+                
+                # 基础判空
+                if not history or not new_step:
+                    if not new_step:
+                        print(f"[Line {line_num}] [Skipped] Missing new_step")
+                        skipped_lines += 1
+                        continue
 
-    # --- 保存通过筛选的数据 ---
-    if passed_items:
-        print(f"\n正在将 {passed_count} 个通过筛选的样本保存到: {output_path}")
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(passed_items, f, ensure_ascii=False, indent=4)
-        print("保存完成。")
-    else:
-        print("\n没有样本通过筛选，不生成输出文件。")
+                # --- 检查 1: new_step 必须以 <step> 开头 ---
+                if not new_step.strip().startswith("<step>"):
+                    print(f"[Line {line_num}] [Skipped] [Prefix Error] new_step does not start with <step>")
+                    skipped_lines += 1
+                    continue
+                
+                # --- 检查 2: 拼接后的逻辑流 ---
+                full_text = history + new_step
+                full_text = full_text.replace("<|im_end|>", "").strip()
+                
+                res = validate_cot_logic(full_text)
+                
+                if res["valid"]:
+                    # === 通过检查，写入新文件 ===
+                    f_out.write(line)
+                    kept_lines += 1
+                else:
+                    # === 未通过检查，跳过 ===
+                    print(f"[Line {line_num}] [Skipped] [Logic Error] {res['error']}")
+                    skipped_lines += 1
+    
+    except FileNotFoundError:
+        print(f"Error: Input file '{input_filename}' not found.")
+        return
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return
 
+    print("\n" + "="*30)
+    print(f"Filter Complete.")
+    print(f"Total Lines Processed: {total_lines}")
+    print(f"Lines Kept (Valid):    {kept_lines}")
+    print(f"Lines Skipped (Error): {skipped_lines}")
+    print(f"Valid data saved to:   {output_filename}")
 
 if __name__ == "__main__":
-    input_file = '/home/v-zhaowan/zhaowang/rag/sample/data_mcts_500.json'
-    output_file = '/home/v-zhaowan/zhaowang/rag/sample/data_mcts_500_filtered.json'
-    main(input_file, output_file)
+    # 默认输入路径
+    input_path = "/home/aiscuser/ds/zhaowang/rag/data/raw/mulsique_pvm.jsonl"
+    
+    # 输出路径 (默认在当前目录下生成 filtered.jsonl)
+    output_path = "/home/aiscuser/ds/zhaowang/rag/data/mulsique_pvm_filtered.jsonl"
+    
+    # 如果命令行传了参数： python filter.py [input_file] [output_file]
+    if len(sys.argv) > 1:
+        input_path = sys.argv[1]
+    if len(sys.argv) > 2:
+        output_path = sys.argv[2]
+        
+    filter_file(input_path, output_path)
