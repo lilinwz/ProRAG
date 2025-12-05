@@ -1,8 +1,9 @@
 import json
+import random
 
 DATA_PATH1 = "/home/v-zhaowan/ds/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
 DATA_PATH2 = "/home/v-zhaowan/ds/zhaowang/rag/data/HotpotQA/train.jsonl"
-OUTPUT_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/train_rl.jsonl"
+OUTPUT_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/train_rl_tmp.jsonl"
 
 INSTRUCTION_TEMPLATE = """You are an assistant tasked with answering user questions by following a step-by-step reasoning process. Structure your entire response using the following special tokens and rules:
 - `<step>...</step>`: Use this to explain the logical reasoning for each step in your process. Each step should bring you closer to solving the user's query.
@@ -29,13 +30,15 @@ if __name__ == "__main__":
             if not item["id"].startswith("2hop"):
                 raw_data.append(item)
     
-    for sample in raw_data:
+    sampled_mul = random.sample(raw_data, min(len(raw_data), 2000))
+    
+    for sample in sampled_mul:
         question = sample["question"]
         answer = sample["answer"]
         paragraphs = sample["paragraphs"]
         
         user_content = INSTRUCTION_TEMPLATE.format(question=question)
-        init_prompt = f"<|im_start|>user\n{user_content}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n" 
+        init_prompt = f"<|im_start|>user\n{user_content}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n<step>\n"
         
         data.append({
             "question": question,
@@ -53,8 +56,10 @@ if __name__ == "__main__":
             item = json.loads(line)
             if item.get("level") == "hard":
                 raw_data.append(item)
+    
+    sampled_hot = random.sample(raw_data, min(len(raw_data), 1000))
 
-    for sample in raw_data:
+    for sample in sampled_hot:
         question = sample["question"]
         answer = sample["answer"]
         context = sample["context"]
@@ -67,7 +72,7 @@ if __name__ == "__main__":
             })
         
         user_content = INSTRUCTION_TEMPLATE.format(question=question)
-        init_prompt = f"<|im_start|>user\n{user_content}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n" 
+        init_prompt = f"<|im_start|>user\n{user_content}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n<step>\n"
         
         data.append({
             "question": question,

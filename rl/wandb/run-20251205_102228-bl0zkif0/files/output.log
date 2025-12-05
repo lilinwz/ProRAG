@@ -1,0 +1,209 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/725 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 5
+--------------------
+ Step 1:
+  >>> Prompt (Partial): orm that was founded in what city in 2010?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+  >>> Completion: To answer the original question, we need to identify the platform that streamed the broadcast of 'Konnichiwa,' as the question connects this platform to its city of founding in 2010.</step>
+<subquery>
+What platform streamed the broadcast of Konnichiwa?</subquery>
+<retrieval>
+  >>> PRM Score: 2.0938, Format Score: 1.0000
+--------------------
+ Step 2:
+  >>> Prompt (Partial): ing performances from Japanese artists Kohh, Dutch Montana, Loota, and DJ Riki.
+</retrieval>
+<step>
+
+  >>> Completion: The paragraph explains that 'Konnichiwa' was broadcast and live-streamed by the platform Boiler Room, which directly answers the subquery.</step>
+<subanswer>
+Boiler Room</subanswer>
+  >>> PRM Score: -1.2578, Format Score: 1.0000
+--------------------
+ Step 3:
+  >>> Prompt (Partial): Boiler Room, which directly answers the subquery.</step>
+<subanswer>
+Boiler Room</subanswer>
+<step>
+
+  >>> Completion: Since we now know the platform is Boiler Room, the next logical step is to determine the city where Boiler Room was founded in 2010, as required by the question.</step>
+<subquery>
+In what city was Boiler Room founded in 2010?</subquery>
+<retrieval>
+  >>> PRM Score: 1.7188, Format Score: 1.0000
+--------------------
+ Step 4:
+  >>> Prompt (Partial): ed to include additional genres, including grime, hip hop, classical, and jazz.
+</retrieval>
+<step>
+
+  >>> Completion: The paragraph specifies that Boiler Room was founded in London, England, in 2010, which directly answers the subquery.</step>
+<subanswer>
+London</subanswer>
+  >>> PRM Score: 0.1611, Format Score: 1.0000
+--------------------
+ Step 5:
+  >>> Prompt (Partial): England, in 2010, which directly answers the subquery.</step>
+<subanswer>
+London</subanswer>
+<step>
+
+  >>> Completion: Combining the reasoning steps, we know that Boiler Room streamed 'Konnichiwa' and was founded in London in 2010, so the city associated with the platform's founding is London.</step>
+<answer>
+London</answer>
+  >>> PRM Score: 1.1328, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: -1.0
+==================================================
+Traceback (most recent call last):
+  File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+    trainer.train()
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+    inputs = self._prepare_inputs(inputs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+    return func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+    generation_batch = self._generate_and_score_completions(generation_batch)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 407, in _generate_and_score_completions
+    old_log_probs = compute_logprobs_in_chunks(model_unwrapped, input_ids, attention_mask)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 396, in compute_logprobs_in_chunks
+    logprobs, _ = self._get_per_token_logps_and_entropies(
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 531, in _get_per_token_logps_and_entropies
+    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/peft_model.py", line 1923, in forward
+    return self.base_model(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/tuners/tuners_utils.py", line 308, in forward
+    return self.model.forward(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 918, in wrapper
+    output = func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 480, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 1072, in wrapper
+    outputs = func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 410, in forward
+    hidden_states = decoder_layer(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 260, in forward
+    hidden_states, _ = self.self_attn(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 216, in forward
+    attn_output, attn_weights = attention_interface(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/integrations/flash_attention.py", line 66, in flash_attention_forward
+    attn_output = _flash_attention_forward(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 607, in _flash_attention_forward
+    q, k, v, indices_q, (cu_seq_lens_q, cu_seq_lens_k), (max_length_q, max_length_k) = _upad_input(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 278, in _upad_input
+    indices_k, cu_seqlens_k, max_seqlen_in_batch_k = _get_unpad_data(attention_mask)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 225, in _get_unpad_data
+    indices = torch.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
+KeyboardInterrupt
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+[rank0]:     trainer.train()
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+[rank0]:     inputs = self._prepare_inputs(inputs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+[rank0]:     generation_batch = self._generate_and_score_completions(generation_batch)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 407, in _generate_and_score_completions
+[rank0]:     old_log_probs = compute_logprobs_in_chunks(model_unwrapped, input_ids, attention_mask)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 396, in compute_logprobs_in_chunks
+[rank0]:     logprobs, _ = self._get_per_token_logps_and_entropies(
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 531, in _get_per_token_logps_and_entropies
+[rank0]:     outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/peft_model.py", line 1923, in forward
+[rank0]:     return self.base_model(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/tuners/tuners_utils.py", line 308, in forward
+[rank0]:     return self.model.forward(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 918, in wrapper
+[rank0]:     output = func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 480, in forward
+[rank0]:     outputs: BaseModelOutputWithPast = self.model(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 1072, in wrapper
+[rank0]:     outputs = func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 410, in forward
+[rank0]:     hidden_states = decoder_layer(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_layers.py", line 94, in __call__
+[rank0]:     return super().__call__(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 260, in forward
+[rank0]:     hidden_states, _ = self.self_attn(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 216, in forward
+[rank0]:     attn_output, attn_weights = attention_interface(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/integrations/flash_attention.py", line 66, in flash_attention_forward
+[rank0]:     attn_output = _flash_attention_forward(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 607, in _flash_attention_forward
+[rank0]:     q, k, v, indices_q, (cu_seq_lens_q, cu_seq_lens_k), (max_length_q, max_length_k) = _upad_input(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 278, in _upad_input
+[rank0]:     indices_k, cu_seqlens_k, max_seqlen_in_batch_k = _get_unpad_data(attention_mask)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 225, in _get_unpad_data
+[rank0]:     indices = torch.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
+[rank0]: KeyboardInterrupt

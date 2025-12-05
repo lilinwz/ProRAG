@@ -1,0 +1,14 @@
+2025-12-01 08:50:40,551 INFO    MainThread:400406 [wandb_setup.py:_flush():80] Current SDK version is 0.23.0
+2025-12-01 08:50:40,552 INFO    MainThread:400406 [wandb_setup.py:_flush():80] Configure stats pid to 400406
+2025-12-01 08:50:40,553 INFO    MainThread:400406 [wandb_setup.py:_flush():80] Loading settings from /home/aiscuser/.config/wandb/settings
+2025-12-01 08:50:40,553 INFO    MainThread:400406 [wandb_setup.py:_flush():80] Loading settings from /home/aiscuser/ds/zhaowang/rag/rl/wandb/settings
+2025-12-01 08:50:40,553 INFO    MainThread:400406 [wandb_setup.py:_flush():80] Loading settings from environment variables
+2025-12-01 08:50:40,661 INFO    MainThread:400406 [wandb_init.py:setup_run_log_directory():713] Logging user logs to /home/aiscuser/ds/zhaowang/rag/rl/wandb/run-20251201_085033-7235611869.80211-3cb301b8-2f70/logs/debug.log
+2025-12-01 08:50:40,770 INFO    MainThread:400406 [wandb_init.py:setup_run_log_directory():714] Logging internal logs to /home/aiscuser/ds/zhaowang/rag/rl/wandb/run-20251201_085033-7235611869.80211-3cb301b8-2f70/logs/debug-internal.log
+2025-12-01 08:50:40,770 INFO    MainThread:400406 [wandb_init.py:init():840] calling init triggers
+2025-12-01 08:50:40,770 INFO    MainThread:400406 [wandb_init.py:init():845] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-12-01 08:50:40,771 INFO    MainThread:400406 [wandb_init.py:init():888] starting backend
+2025-12-01 08:50:41,106 INFO    MainThread:400406 [wandb_init.py:init():891] sending inform_init request
+2025-12-01 08:50:42,511 INFO    MainThread:400406 [wandb_init.py:init():899] backend started and connected
+2025-12-01 08:50:42,620 INFO    MainThread:400406 [wandb_init.py:init():969] updated telemetry

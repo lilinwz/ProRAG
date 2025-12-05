@@ -1,0 +1,99 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/725 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+  1%|          | 4/725 [30:01<89:45:57, 448.21s/it]
+
+{'loss': 1.5389, 'grad_norm': 25.225902557373047, 'learning_rate': 1e-06, 'rollout/outcome_reward_mean': -0.125, 'rollout/accuracy_mean': 0.328125, 'rollout/format_reward_mean': -0.78125, 'rollout/prm_score_mean': -2.7366912038702713, 'rollout/step_format_score_mean': -0.8842105263157894, 'rollout/advantage_mean': -1.794089100012896, 'rollout/avg_steps': 5.9375, 'loss/policy_loss': 1.7666863310737666, 'logps/kl': 6.460246567612332e-05, 'logps/clip_ratio': 0.18040822655150013, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 1.2738, 'grad_norm': 21.070810317993164, 'learning_rate': 9.986206896551724e-07, 'rollout/outcome_reward_mean': -0.03125, 'rollout/accuracy_mean': 0.3125, 'rollout/format_reward_mean': -0.65625, 'rollout/prm_score_mean': -2.093048095703125, 'rollout/step_format_score_mean': -0.2892561983471074, 'rollout/advantage_mean': -0.9884397392977169, 'rollout/avg_steps': 7.5625, 'loss/policy_loss': 0.874425302942853, 'logps/kl': -0.00039656110613967797, 'logps/clip_ratio': 0.21347943533387256, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: -1.0
+==================================================
+
+{'loss': 1.5929, 'grad_norm': 25.880050659179688, 'learning_rate': 9.972413793103449e-07, 'rollout/outcome_reward_mean': -1.0, 'rollout/accuracy_mean': 0.0, 'rollout/format_reward_mean': -1.0, 'rollout/prm_score_mean': -3.149848699569702, 'rollout/step_format_score_mean': -0.6015625, 'rollout/advantage_mean': -1.4654888737574834, 'rollout/avg_steps': 8.0, 'loss/policy_loss': 1.074316366755074, 'logps/kl': -6.493556623784932e-05, 'logps/clip_ratio': 0.23196565756711046, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 1.6616, 'grad_norm': 22.422719955444336, 'learning_rate': 9.95862068965517e-07, 'rollout/outcome_reward_mean': -0.1875, 'rollout/accuracy_mean': 0.390625, 'rollout/format_reward_mean': -0.96875, 'rollout/prm_score_mean': -1.8766313851055494, 'rollout/step_format_score_mean': -0.7050147492625368, 'rollout/advantage_mean': -1.5582389859380543, 'rollout/avg_steps': 5.296875, 'loss/policy_loss': 1.5598937203873948, 'logps/kl': -0.00016708944051202005, 'logps/clip_ratio': 0.3657813181936684, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: -1.0
+==================================================
+
+{'loss': 1.4453, 'grad_norm': 23.61097526550293, 'learning_rate': 9.944827586206895e-07, 'rollout/outcome_reward_mean': -0.28125, 'rollout/accuracy_mean': 0.25, 'rollout/format_reward_mean': -0.78125, 'rollout/prm_score_mean': -2.425737826720528, 'rollout/step_format_score_mean': -0.7663043478260869, 'rollout/advantage_mean': -1.6657671632062396, 'rollout/avg_steps': 5.75, 'loss/policy_loss': 1.6352619512361997, 'logps/kl': -0.00016303233017172435, 'logps/clip_ratio': 0.014504698609385814, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 1.6687, 'grad_norm': 22.983407974243164, 'learning_rate': 9.93103448275862e-07, 'rollout/outcome_reward_mean': -0.8125, 'rollout/accuracy_mean': 0.0, 'rollout/format_reward_mean': -0.8125, 'rollout/prm_score_mean': -3.909691526178728, 'rollout/step_format_score_mean': -0.8796992481203008, 'rollout/advantage_mean': -1.7868608696040615, 'rollout/avg_steps': 6.234375, 'loss/policy_loss': 1.750813565989758, 'logps/kl': 0.0002310526677306488, 'logps/clip_ratio': 0.5176134071991807, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: -1.0
+==================================================
+
+{'loss': 2.4837, 'grad_norm': 9102.0556640625, 'learning_rate': 9.917241379310344e-07, 'rollout/outcome_reward_mean': -0.125, 'rollout/accuracy_mean': 0.25, 'rollout/format_reward_mean': -0.625, 'rollout/prm_score_mean': -2.3755793596178756, 'rollout/step_format_score_mean': -0.7150259067357513, 'rollout/advantage_mean': -1.6134198360933845, 'rollout/avg_steps': 6.03125, 'loss/policy_loss': 3.60396289259526, 'logps/kl': -0.001454866629625249, 'logps/clip_ratio': 0.5412143966835672, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 1.5551, 'grad_norm': 22.847904205322266, 'learning_rate': 9.903448275862069e-07, 'rollout/outcome_reward_mean': 0.5625, 'rollout/accuracy_mean': 0.609375, 'rollout/format_reward_mean': -0.65625, 'rollout/prm_score_mean': -1.8961316094882246, 'rollout/step_format_score_mean': -0.7043478260869566, 'rollout/advantage_mean': -1.5637484433247995, 'rollout/avg_steps': 5.390625, 'loss/policy_loss': 1.6582726449023713, 'logps/kl': -0.0009285386886059653, 'logps/clip_ratio': 0.5060843063785149, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 1.4495, 'grad_norm': 22.640117645263672, 'learning_rate': 9.889655172413791e-07, 'rollout/outcome_reward_mean': 0.03125, 'rollout/accuracy_mean': 0.0, 'rollout/format_reward_mean': 0.03125, 'rollout/prm_score_mean': 0.21540393313846073, 'rollout/step_format_score_mean': -0.15675675675675677, 'rollout/advantage_mean': -0.8364612521607511, 'rollout/avg_steps': 5.78125, 'loss/policy_loss': 0.8377986304538116, 'logps/kl': -2.0814759312769522e-05, 'logps/clip_ratio': 0.5079083708554758, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 1.6721, 'grad_norm': 22.56684684753418, 'learning_rate': 9.875862068965518e-07, 'rollout/outcome_reward_mean': -0.1875, 'rollout/accuracy_mean': 0.296875, 'rollout/format_reward_mean': -0.78125, 'rollout/prm_score_mean': -2.3053693890274314, 'rollout/step_format_score_mean': -0.7506234413965087, 'rollout/advantage_mean': -1.6056551793987737, 'rollout/avg_steps': 6.265625, 'loss/policy_loss': 1.5882648668778958, 'logps/kl': -0.000878204763174184, 'logps/clip_ratio': 0.5170221273068409, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: -1.0
+==================================================
+
+{'loss': 1.4378, 'grad_norm': 22.363649368286133, 'learning_rate': 9.86206896551724e-07, 'rollout/outcome_reward_mean': -0.875, 'rollout/accuracy_mean': 0.0625, 'rollout/format_reward_mean': -1.0, 'rollout/prm_score_mean': -1.6999563116776315, 'rollout/step_format_score_mean': -0.3726315789473684, 'rollout/advantage_mean': -1.2943741834535714, 'rollout/avg_steps': 7.421875, 'loss/policy_loss': 1.140691704424055, 'logps/kl': -0.00014512983954653638, 'logps/clip_ratio': 0.3961240286079676, 'epoch': 0.02}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================

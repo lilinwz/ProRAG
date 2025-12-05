@@ -1,0 +1,1 @@
+{"_step":31,"train/global_step":0,"profiling/Time taken: RAGTrainer.compute_loss":89.62084150698502,"_wandb":{"runtime":2809},"_runtime":2809,"profiling/Time taken: RAGTrainer._prepare_inputs":1.2353004422038794e-05,"_timestamp":1.7645786013814328e+09}

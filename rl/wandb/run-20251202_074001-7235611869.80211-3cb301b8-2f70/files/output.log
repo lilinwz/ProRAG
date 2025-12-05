@@ -1,0 +1,241 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/362 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Prompt (Partial):
+<|im_start|>user
+You are an assistant tasked with answering user questions by following a step-by-step reasoning process. Structure your entire response using the following special tokens and rules:
+- `<step>...</step>`: Use this to explain the logical reasoning for each step in your process. Each step should bring you closer to solving the user's query.
+- `<subquery>...</subquery>`: This block contains a specific question or sub-question that needs to be answered in order to progress. This is part of your reasoning, so make sure the subquery is clear and answerable.
+- `<retrieval>...</retrieval>`: This block contains information retrieved from external sources (such as a search engine) that help answer the subquery. It can contain factual data or direct quotes.
+- `<subanswer>...</subanswer>`: This block contains the answer to the preceding subquery. It's the most direct, concise answer that results from the retrieval.
+- `<answer>...</answer>`: This is the final, conclusive answer to the user's main question, derived by combining the steps and subanswers.
+
+Now, use this structure to answer the following user question:
+
+User Question: What was the name of Kim Jung-eun’s film that was an instant hit and beat out films like “Jail Breakers” and “The Way Home?”
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+To identify the film that was an instant hit and outperformed others, it is essential to first determine the name of the film starring Kim Jung-eun.</step>
+<subquery>
+What was the name of the film starring Kim Jung-eun?</subquery>
+<retrieval>
+Title: Kim Jung-eun
+Kim Jung-eun (born March 4, 1976) is a South Korean actress.
+ She is best known for her roles in the film "Marrying the Mafia" (2002) and the television series "Lovers in Paris" (2004), "I Am Legend" (2010), and "Make A Woman Cry.
+ In 2008, Kim hosted her own music talk show "Kim Jung-eun's Chocolate" on SBS.
+</retrieval>
+<step>
+The paragraph explicitly states that Kim Jung-eun is best known for her role in the film 'Marrying the Mafia,' making this the answer to the subquery.</step>
+<subanswer>
+Marrying the Mafia</subanswer>
+<step>
+After identifying 'Marrying the Mafia' as Kim Jung-eun's film, it is logical to investigate why it was an instant hit and how it compared to other films like 'Jail Breakers' and 'The Way Home.'</step>
+<subquery>
+Why was 'Marrying the Mafia' an instant hit and what did it beat out in terms of box office earnings?</subquery>
+<retrieval>
+Title: Marrying the Mafia
+Marrying the Mafia () is a 2002 South Korea film released on September 13, 2002.
+ It was an instant hit, beating out other 2002 film competitors such as "Jail Breakers", "The Way Home" and "Sex is Zero".
+</retrieval>
+<step>
+The paragraph directly mentions that 'Marrying the Mafia' was an instant hit, surpassing competitors like 'Jail Breakers,' 'The Way Home,' and 'Sex is Zero' in box office earnings.</step>
+<subanswer>
+It was an instant hit, beating out other 2002 film competitors such as 'Jail Breakers,' 'The Way Home,' and 'Sex is Zero.'</subanswer>
+<step>
+By combining the information that 'Marrying the Mafia' starred Kim Jung-eun and that it was an instant hit, outperforming films like 'Jail Breakers' and 'The Way Home,' the final answer is confirmed as 'Marrying the Mafia.'</step>
+<answer>
+``Marrying the Mafia ''</answer>...
+--------------------
+>>> Generated Full History:
+<step>
+To identify the film that was an instant hit and outperformed others, it is essential to first determine the name of the film starring Kim Jung-eun.</step>
+<subquery>
+What was the name of the film starring Kim Jung-eun?</subquery>
+<retrieval>
+Title: Kim Jung-eun
+Kim Jung-eun (born March 4, 1976) is a South Korean actress.
+ She is best known for her roles in the film "Marrying the Mafia" (2002) and the television series "Lovers in Paris" (2004), "I Am Legend" (2010), and "Make A Woman Cry.
+ In 2008, Kim hosted her own music talk show "Kim Jung-eun's Chocolate" on SBS.
+</retrieval>
+<step>
+The paragraph explicitly states that Kim Jung-eun is best known for her role in the film 'Marrying the Mafia,' making this the answer to the subquery.</step>
+<subanswer>
+Marrying the Mafia</subanswer>
+<step>
+After identifying 'Marrying the Mafia' as Kim Jung-eun's film, it is logical to investigate why it was an instant hit and how it compared to other films like 'Jail Breakers' and 'The Way Home.'</step>
+<subquery>
+Why was 'Marrying the Mafia' an instant hit and what did it beat out in terms of box office earnings?</subquery>
+<retrieval>
+Title: Marrying the Mafia
+Marrying the Mafia () is a 2002 South Korea film released on September 13, 2002.
+ It was an instant hit, beating out other 2002 film competitors such as "Jail Breakers", "The Way Home" and "Sex is Zero".
+</retrieval>
+<step>
+The paragraph directly mentions that 'Marrying the Mafia' was an instant hit, surpassing competitors like 'Jail Breakers,' 'The Way Home,' and 'Sex is Zero' in box office earnings.</step>
+<subanswer>
+It was an instant hit, beating out other 2002 film competitors such as 'Jail Breakers,' 'The Way Home,' and 'Sex is Zero.'</subanswer>
+<step>
+By combining the information that 'Marrying the Mafia' starred Kim Jung-eun and that it was an instant hit, outperforming films like 'Jail Breakers' and 'The Way Home,' the final answer is confirmed as 'Marrying the Mafia.'</step>
+<answer>
+``Marrying the Mafia ''</answer>
+--------------------
+>>> Extracted Answer: ``marrying the mafia ''
+>>> Calculated Format Reward: 1.0
+==================================================
+
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+  0%|          | 1/362 [02:50<17:06:21, 170.58s/it]
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Prompt (Partial):
+<|im_start|>user
+You are an assistant tasked with answering user questions by following a step-by-step reasoning process. Structure your entire response using the following special tokens and rules:
+- `<step>...</step>`: Use this to explain the logical reasoning for each step in your process. Each step should bring you closer to solving the user's query.
+- `<subquery>...</subquery>`: This block contains a specific question or sub-question that needs to be answered in order to progress. This is part of your reasoning, so make sure the subquery is clear and answerable.
+- `<retrieval>...</retrieval>`: This block contains information retrieved from external sources (such as a search engine) that help answer the subquery. It can contain factual data or direct quotes.
+- `<subanswer>...</subanswer>`: This block contains the answer to the preceding subquery. It's the most direct, concise answer that results from the retrieval.
+- `<answer>...</answer>`: This is the final, conclusive answer to the user's main question, derived by combining the steps and subanswers.
+
+Now, use this structure to answer the following user question:
+
+User Question: What is the biggest attack by the Islamic terrorist group that Bush said the 'war of terror' began with, against the country where the Federal Detention Center can be found in the city that Mikhail Simonyan is from?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+To determine the location relevant to the question, we first need to identify the city that Mikhail Simonyan is associated with.</step>
+<subquery>
+What city is Mikhail Simonyan from?</subquery>
+<retrieval>
+Title: Mikhail Simonyan
+Mikhail Simonyan studied at the Curtis Institute of Music in Philadelphia and continues to work with Victor Danchenko. He lives in Philadelphia.
+</retrieval>
+Philadelphia</subanswer>
+<step>
+Since the Federal Detention Center is mentioned in the question as being in the same city as Mikhail Simonyan, the next step is to identify the country where this center in Philadelphia is located.</step>
+<subquery>
+In which country is the Federal Detention Center in Philadelphia located?</subquery>
+<retrieval>
+Title: Federal Detention Center, Philadelphia
+The Federal Detention Center (FDC Philadelphia) is a United States Federal prison in Center City, Philadelphia, Pennsylvania which holds male and female inmates prior to or during court proceedings, as well as inmates serving brief sentences. It is operated by the Federal Bureau of Prisons, a division of the United States Department of Justice.
+</retrieval>
+the United States</subanswer>
+<step>
+The question references the 'war on terror' initiated by Bush, so we need to determine the group Bush stated was the starting point for this war.</step>
+<subquery>
+According to Bush, with which group did the 'war on terror' begin?</subquery>
+<retrieval>
+Title: War on Terror
+On 16 September 2001, at Camp David, President George W. Bush used the phrase war on terrorism in an unscripted and controversial comment when he said, "This crusade – this war on terrorism – is going to take a while, ... " Bush later apologized for this remark due to the negative connotations the term crusade has to people, e.g. of Muslim faith. The word crusade was not used again. On 20 September 2001, during a televised address to a joint session of congress, Bush stated that, "(o)ur 'war on terror' begins with al-Qaeda, but it does not end there. It will not end until every terrorist group of global reach has been found, stopped, and defeated."
+</retrieval>
+al-Qaeda</subanswer>
+<step>
+To identify the biggest attack by al-Qaeda against the United States, we need to determine their most significant terrorist act targeting this country.</step>
+<subquery>
+What is the biggest terrorist attack by the Islamic terrorist group al-Qaeda against the United States?</subquery>
+<retrieval>
+Title: September 11 attacks
+The September 11 attacks (also referred to as 9 / 11) were a series of four coordinated terrorist attacks by the Islamic terrorist group al - Qaeda on the United States on the morning of Tuesday, September 11, 2001. The attacks killed 2,996 people, injured over 6,000 others, and caused at least $10 billion in infrastructure and property damage.
+</retrieval>
+The September 11 attacks</subanswer>...
+--------------------
+>>> Generated Full History:
+<step>
+To determine the location relevant to the question, we first need to identify the city that Mikhail Simonyan is associated with.</step>
+<subquery>
+What city is Mikhail Simonyan from?</subquery>
+<retrieval>
+Title: Mikhail Simonyan
+Mikhail Simonyan studied at the Curtis Institute of Music in Philadelphia and continues to work with Victor Danchenko. He lives in Philadelphia.
+</retrieval>
+Philadelphia</subanswer>
+<step>
+Since the Federal Detention Center is mentioned in the question as being in the same city as Mikhail Simonyan, the next step is to identify the country where this center in Philadelphia is located.</step>
+<subquery>
+In which country is the Federal Detention Center in Philadelphia located?</subquery>
+<retrieval>
+Title: Federal Detention Center, Philadelphia
+The Federal Detention Center (FDC Philadelphia) is a United States Federal prison in Center City, Philadelphia, Pennsylvania which holds male and female inmates prior to or during court proceedings, as well as inmates serving brief sentences. It is operated by the Federal Bureau of Prisons, a division of the United States Department of Justice.
+</retrieval>
+the United States</subanswer>
+<step>
+The question references the 'war on terror' initiated by Bush, so we need to determine the group Bush stated was the starting point for this war.</step>
+<subquery>
+According to Bush, with which group did the 'war on terror' begin?</subquery>
+<retrieval>
+Title: War on Terror
+On 16 September 2001, at Camp David, President George W. Bush used the phrase war on terrorism in an unscripted and controversial comment when he said, "This crusade – this war on terrorism – is going to take a while, ... " Bush later apologized for this remark due to the negative connotations the term crusade has to people, e.g. of Muslim faith. The word crusade was not used again. On 20 September 2001, during a televised address to a joint session of congress, Bush stated that, "(o)ur 'war on terror' begins with al-Qaeda, but it does not end there. It will not end until every terrorist group of global reach has been found, stopped, and defeated."
+</retrieval>
+al-Qaeda</subanswer>
+<step>
+To identify the biggest attack by al-Qaeda against the United States, we need to determine their most significant terrorist act targeting this country.</step>
+<subquery>
+What is the biggest terrorist attack by the Islamic terrorist group al-Qaeda against the United States?</subquery>
+<retrieval>
+Title: September 11 attacks
+The September 11 attacks (also referred to as 9 / 11) were a series of four coordinated terrorist attacks by the Islamic terrorist group al - Qaeda on the United States on the morning of Tuesday, September 11, 2001. The attacks killed 2,996 people, injured over 6,000 others, and caused at least $10 billion in infrastructure and property damage.
+</retrieval>
+The September 11 attacks</subanswer>
+--------------------
+>>> No <answer> tag found.
+>>> Calculated Format Reward: 0.0
+==================================================
+
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+Trainable params: 43646976
+  File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+    trainer.train()
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4020, in training_step
+    loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+    return func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1816, in compute_loss
+    return self._compute_loss(model, inputs)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer_tmp.py", line 438, in _compute_loss
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/cuda/memory.py", line 222, in empty_cache
+    torch._C._cuda_emptyCache()
+KeyboardInterrupt
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+[rank0]:     trainer.train()
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4020, in training_step
+[rank0]:     loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1816, in compute_loss
+[rank0]:     return self._compute_loss(model, inputs)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer_tmp.py", line 438, in _compute_loss
+[rank0]:
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/cuda/memory.py", line 222, in empty_cache
+[rank0]:     torch._C._cuda_emptyCache()
+[rank0]: KeyboardInterrupt

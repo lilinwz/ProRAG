@@ -1,0 +1,110 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/725 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 5
+--------------------
+ Step 1:
+  >>> Prompt (Partial): ut films like “Jail Breakers” and “The Way Home?”
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+
+  >>> Completion: <step>
+To identify the film that was an instant hit and outperformed others, we first need to determine the name of the film that was particularly popular and successful at the box office.</step>
+<subquery>
+What was the name of the film that was an instant hit and outperformed others at the box office?</subquery>
+<retrieval>
+  >>> PRM Score: 0.4531, Format Score: 1.0000
+--------------------
+ Step 2:
+  >>> Prompt (Partial): other 2002 film competitors such as "Jail Breakers", "The Way Home" and "Sex is Zero".
+</retrieval>
+
+  >>> Completion: <step>
+From the paragraph, it is clear that 'Marrying the Mafia' was the film that was an instant hit, as it explicitly states that it outperformed competitors like 'Jail Breakers' and 'The Way Home'.</step>
+<subanswer>
+Marrying the Mafia</subanswer>
+  >>> PRM Score: -0.4531, Format Score: 1.0000
+--------------------
+ Step 3:
+  >>> Prompt (Partial): mpetitors like 'Jail Breakers' and 'The Way Home'.</step>
+<subanswer>
+Marrying the Mafia</subanswer>
+  >>> Completion:
+<step>
+Now that we know 'Marrying the Mafia' was the film in question, we need to confirm which film this is associated with Kim Jung-eun to establish the connection to the original question.</step>
+<subquery>
+What film is Kim Jung-eun associated with?</subquery>
+<retrieval>
+  >>> PRM Score: -0.5117, Format Score: 1.0000
+--------------------
+ Step 4:
+  >>> Prompt (Partial): n Cry.
+ In 2008, Kim hosted her own music talk show "Kim Jung-eun's Chocolate" on SBS.
+</retrieval>
+
+  >>> Completion: <step>
+From the paragraph, it is stated that Kim Jung-eun is best known for her role in 'Marrying the Mafia,' directly linking her to the film.</step>
+<subanswer>
+Marrying the Mafia</subanswer>
+  >>> PRM Score: 0.1553, Format Score: 1.0000
+--------------------
+ Step 5:
+  >>> Prompt (Partial): ying the Mafia,' directly linking her to the film.</step>
+<subanswer>
+Marrying the Mafia</subanswer>
+  >>> Completion:
+<step>
+By combining the reasoning steps, we confirm that Kim Jung-eun's film 'Marrying the Mafia' was the instant hit that outperformed 'Jail Breakers' and 'The Way Home,' directly answering the original question.</step>
+<answer>
+Marrying the Mafia</answer>
+  >>> PRM Score: 0.9883, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================
+Traceback (most recent call last):
+  File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+    trainer.train()
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+    inputs = self._prepare_inputs(inputs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+    return func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+    generation_batch = self._generate_and_score_completions(generation_batch)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 412, in _generate_and_score_completions
+    ref_log_probs = compute_logprobs_in_chunks(model_unwrapped, input_ids, attention_mask)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 401, in compute_logprobs_in_chunks
+    torch.cuda.empty_cache()
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/cuda/memory.py", line 222, in empty_cache
+    torch._C._cuda_emptyCache()
+KeyboardInterrupt
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+[rank0]:     trainer.train()
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+[rank0]:     inputs = self._prepare_inputs(inputs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+[rank0]:     generation_batch = self._generate_and_score_completions(generation_batch)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 412, in _generate_and_score_completions
+[rank0]:     ref_log_probs = compute_logprobs_in_chunks(model_unwrapped, input_ids, attention_mask)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 401, in compute_logprobs_in_chunks
+[rank0]:     torch.cuda.empty_cache()
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/cuda/memory.py", line 222, in empty_cache
+[rank0]:     torch._C._cuda_emptyCache()
+[rank0]: KeyboardInterrupt

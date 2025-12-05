@@ -1,0 +1,140 @@
+[34m[1mwandb[0m: Detected [huggingface_hub.inference, openai] in use.
+[34m[1mwandb[0m: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+[34m[1mwandb[0m: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|                                                                                                                                                                                             | 0/5304 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
+Caching is incompatible with gradient checkpointing in Qwen3DecoderLayer. Setting `past_key_values=None`.
+Traceback (most recent call last):
+  File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 146, in <module>
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+    inputs = self._prepare_inputs(inputs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+    return func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+    generation_batch = self._generate_and_score_completions(generation_batch)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer_tmp.py", line 205, in _generate_and_score_completions
+    current_prompts, return_tensors="pt", padding=True, truncation=True, padding_side="left"
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/peft_model.py", line 2048, in generate
+    outputs = self.base_model.generate(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/generation/utils.py", line 2564, in generate
+    result = decoding_method(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/generation/utils.py", line 2787, in _sample
+    outputs = model_forward(**model_inputs, return_dict=True)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 918, in wrapper
+    output = func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 480, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 1064, in wrapper
+    outputs = func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 410, in forward
+    hidden_states = decoder_layer(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_layers.py", line 93, in __call__
+    return self._gradient_checkpointing_func(partial(super().__call__, **kwargs), *args)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/_compile.py", line 53, in inner
+    return disable_fn(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 1044, in _fn
+    return fn(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/utils/checkpoint.py", line 503, in checkpoint
+    ret = function(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 260, in forward
+    hidden_states, _ = self.self_attn(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 216, in forward
+    attn_output, attn_weights = attention_interface(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/integrations/flash_attention.py", line 66, in flash_attention_forward
+    attn_output = _flash_attention_forward(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 632, in _flash_attention_forward
+    elif is_fa_with_varlen_kwargs or is_fa_with_position_ids:
+KeyboardInterrupt
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 146, in <module>
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+[rank0]:     inputs = self._prepare_inputs(inputs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+[rank0]:     generation_batch = self._generate_and_score_completions(generation_batch)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer_tmp.py", line 205, in _generate_and_score_completions
+[rank0]:     current_prompts, return_tensors="pt", padding=True, truncation=True, padding_side="left"
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/peft_model.py", line 2048, in generate
+[rank0]:     outputs = self.base_model.generate(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/generation/utils.py", line 2564, in generate
+[rank0]:     result = decoding_method(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/generation/utils.py", line 2787, in _sample
+[rank0]:     outputs = model_forward(**model_inputs, return_dict=True)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 918, in wrapper
+[rank0]:     output = func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 480, in forward
+[rank0]:     outputs: BaseModelOutputWithPast = self.model(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 1064, in wrapper
+[rank0]:     outputs = func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 410, in forward
+[rank0]:     hidden_states = decoder_layer(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_layers.py", line 93, in __call__
+[rank0]:     return self._gradient_checkpointing_func(partial(super().__call__, **kwargs), *args)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/_compile.py", line 53, in inner
+[rank0]:     return disable_fn(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 1044, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/utils/checkpoint.py", line 503, in checkpoint
+[rank0]:     ret = function(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 260, in forward
+[rank0]:     hidden_states, _ = self.self_attn(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 216, in forward
+[rank0]:     attn_output, attn_weights = attention_interface(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/integrations/flash_attention.py", line 66, in flash_attention_forward
+[rank0]:     attn_output = _flash_attention_forward(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 632, in _flash_attention_forward
+[rank0]:     elif is_fa_with_varlen_kwargs or is_fa_with_position_ids:
+[rank0]: KeyboardInterrupt

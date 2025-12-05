@@ -1,0 +1,36 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/362 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+Traceback (most recent call last):
+  File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+    trainer.train()
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4020, in training_step
+    loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+    return func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1816, in compute_loss
+    return self._compute_loss(model, inputs)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer_tmp.py", line 494, in _compute_loss
+    avg_kl = total_kl_sum / total_valid_tokens if total_valid_tokens > 0 else 0.0
+NameError: name 'total_valid_tokens' is not defined
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+[rank0]:     trainer.train()
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4020, in training_step
+[rank0]:     loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1816, in compute_loss
+[rank0]:     return self._compute_loss(model, inputs)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer_tmp.py", line 494, in _compute_loss
+[rank0]:     avg_kl = total_kl_sum / total_valid_tokens if total_valid_tokens > 0 else 0.0
+[rank0]: NameError: name 'total_valid_tokens' is not defined

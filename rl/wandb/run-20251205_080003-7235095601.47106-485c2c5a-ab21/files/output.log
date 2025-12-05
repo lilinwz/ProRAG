@@ -1,0 +1,43 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/725 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+  1%|          | 4/725 [40:25<121:16:26, 605.53s/it]
+
+{'loss': 0.8154, 'grad_norm': 12.1759614944458, 'learning_rate': 1e-06, 'rollout/outcome_reward_mean': -0.09375, 'rollout/accuracy_mean': 0.328125, 'rollout/format_reward_mean': -0.75, 'rollout/prm_score_mean': -2.724203619033254, 'rollout/step_format_score_mean': -0.8795811518324608, 'rollout/advantage_mean': -0.8941857608341715, 'rollout/avg_steps': 5.96875, 'loss/policy_loss': 0.930018018878633, 'logps/kl': 6.788593502830041e-05, 'logps/clip_ratio': 0.18207796894076217, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 1.5644, 'grad_norm': 191.6386260986328, 'learning_rate': 9.986206896551724e-07, 'rollout/outcome_reward_mean': -0.3125, 'rollout/accuracy_mean': 0.0625, 'rollout/format_reward_mean': -0.4375, 'rollout/prm_score_mean': -2.263817003619814, 'rollout/step_format_score_mean': -0.5060034305317325, 'rollout/advantage_mean': -0.6921305315017577, 'rollout/avg_steps': 9.109375, 'loss/policy_loss': 0.5915130138698486, 'logps/kl': -0.0003465657122955215, 'logps/clip_ratio': 0.22060419493245453, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: -1.0
+==================================================
+
+{'loss': 0.8513, 'grad_norm': 13.105612754821777, 'learning_rate': 9.972413793103449e-07, 'rollout/outcome_reward_mean': -0.71875, 'rollout/accuracy_mean': 0.140625, 'rollout/format_reward_mean': -1.0, 'rollout/prm_score_mean': -3.6144479220030736, 'rollout/step_format_score_mean': -0.8819672131147541, 'rollout/advantage_mean': -0.89221413275345, 'rollout/avg_steps': 9.53125, 'loss/policy_loss': 0.910690032524613, 'logps/kl': -9.094841223413821e-05, 'logps/clip_ratio': 0.12928651068103053, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 0.8127, 'grad_norm': 10.610804557800293, 'learning_rate': 9.95862068965517e-07, 'rollout/outcome_reward_mean': -0.53125, 'rollout/accuracy_mean': 0.21875, 'rollout/format_reward_mean': -0.96875, 'rollout/prm_score_mean': -1.5865779808762723, 'rollout/step_format_score_mean': -0.648854961832061, 'rollout/advantage_mean': -0.7597545065670995, 'rollout/avg_steps': 6.140625, 'loss/policy_loss': 0.753884816057255, 'logps/kl': 9.397692727874112e-06, 'logps/clip_ratio': 0.2578004049421253, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Calculated Format Reward: 1.0
+==================================================
