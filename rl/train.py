@@ -1,4 +1,5 @@
 """
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python -m accelerate.commands.launch \
     --config_file /home/aiscuser/ds/zhaowang/rag/rl/ds.yaml \
     train.py 2>&1 | tee train.log
@@ -24,11 +25,11 @@ OUTPUT_DIR = "/home/aiscuser/ds/zhaowang/rag/save/rl"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.environ["WANDB_PROJECT"] = "ProRAG"
 
-EPOCHS = 1
+EPOCHS = 2
 PER_DEVICE_TRAIN_BATCH_SIZE = 1
 GRADIENT_ACCUMULATION_STEPS = 8
-LEARNING_RATE = 1e-6 
-NUM_GENERATIONS = 8
+LEARNING_RATE = 1e-5 
+NUM_GENERATIONS = 4
 BETA_PRM = 0.5
 MAX_PROMPT_LENGTH = 4096
 MAX_COMPLETION_LENGTH = 1024
@@ -41,6 +42,7 @@ def load_dataset_splits(test_size=100):
                 data_list.append(json.loads(line))
     
     full_dataset = Dataset.from_list(data_list)
+    full_dataset = full_dataset.shuffle(seed=42) 
     dataset_dict = full_dataset.train_test_split(test_size=100, seed=42)   
     return dataset_dict['train'], dataset_dict['test']
 

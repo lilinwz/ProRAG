@@ -1,4 +1,5 @@
 import re
+import gc
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -40,7 +41,7 @@ class E5VectorRetriever:
                 show_progress_bar=False,
                 batch_size=32,
                 normalize_embeddings=True
-            )
+            ).cpu()
         self.corpus_embeddings = emb
         self._encoded = True
 
@@ -56,7 +57,7 @@ class E5VectorRetriever:
                 device=self.device, 
                 show_progress_bar=False,
                 normalize_embeddings=True
-            )
+            ).cpu()
             scores = torch.matmul(self.corpus_embeddings, q_emb)
             top_indices = torch.topk(scores, min(top_k, len(scores))).indices.cpu().tolist()
         
@@ -147,7 +148,23 @@ def format_reward(completion):
 
     if is_structure_valid:
         return 1.0
-    return -1.0
+    return -1.
+
+def calculate_f1_score(prediction: str, ground_truth: str) -> float:
+    prediction_tokens = prediction.split()
+    
+    gt_tokens = ground_truth.split()
+    if not prediction_tokens or not gt_tokens:
+        return 0.0
+    common = collections.Counter(prediction_tokens) & collections.Counter(gt_tokens)
+    num_same = sum(common.values())
+    if num_same == 0:
+        return 0.0
+    prec = num_same / len(prediction_tokens)
+    rec = num_same / len(gt_tokens)
+    f1 = 2 * prec * rec / (prec + rec)
+
+    return f1
 
 class RAGTrainer(GRPOTrainer):
     def __init__(self, *args, **kwargs):
@@ -188,9 +205,9 @@ class RAGTrainer(GRPOTrainer):
 
         gen_config = GenerationConfig(
             max_new_tokens=512,
-            temperature=0.8,
+            temperature=1.0,
             do_sample=True,
-            top_p=0.9,
+            top_p=0.95,
             pad_token_id=self.processing_class.pad_token_id,
             eos_token_id=stop_ids,
         )
@@ -263,27 +280,27 @@ class RAGTrainer(GRPOTrainer):
                     next_indices.append(i)
             active_indices = next_indices
 
-        if self.accelerator.is_main_process:
-            print("\n" + "="*50)
-            print(" [DEBUG ROLLOUT SNAPSHOT] ")
-            print("="*50)
+        # if self.accelerator.is_main_process:
+        #     print("\n" + "="*50)
+        #     print(" [DEBUG ROLLOUT SNAPSHOT] ")
+        #     print("="*50)
 
-            debug_env = active_envs[0]            
-            debug_text = debug_env.history_text
-            debug_traj = debug_env.trajectory
-            debug_fmt = format_reward(debug_text)
+        #     debug_env = active_envs[0]            
+        #     debug_text = debug_env.history_text
+        #     debug_traj = debug_env.trajectory
+        #     debug_fmt = format_reward(debug_text)
  
-            print(f">>> Total Interaction Steps: {len(debug_traj)}")
-            print("-" * 20)
-            for idx, step in enumerate(debug_traj):
-                print(f" Step {idx+1}:")
-                print(f">>> Prompt (Partial): {step['prompt'][-100:]}")
-                print(f">>> Completion: {step['completion']}")
-                print(f">>> PRM Score: {step['prm_score']:.4f}, Format Score: {step['format_score']:.4f}")
-                print("-" * 20)
+        #     print(f">>> Total Interaction Steps: {len(debug_traj)}")
+        #     print("-" * 20)
+        #     for idx, step in enumerate(debug_traj):
+        #         print(f" Step {idx+1}:")
+        #         print(f">>> Prompt (Partial): {step['prompt'][-100:]}")
+        #         print(f">>> Completion: {step['completion']}")
+        #         print(f">>> PRM Score: {step['prm_score']:.4f}, Format Score: {step['format_score']:.4f}")
+        #         print("-" * 20)
 
-            print(f">>> Calculated Format Reward: {debug_fmt}")
-            print("="*50 + "\n")
+        #     print(f">>> Calculated Format Reward: {debug_fmt}")
+        #     print("="*50 + "\n")
         
         # --- 2. Advantage Calculation & Mixing ---
         flat_prompts, flat_completions, flat_advantages = [], [], []
@@ -300,7 +317,9 @@ class RAGTrainer(GRPOTrainer):
                 match = re.search(r"<answer>\n(.*?)</answer>", full_text, re.DOTALL)
                 if match:
                     pred = match.group(1).strip().lower()
-                    if gt_ans == pred: acc = 1.0
+                    f1 = calculate_f1_score(pred, gt_ans)
+                    if f1 > 0.2:
+                        acc = f1
 
                 fmt = format_reward(full_text)
                 total_reward = fmt + acc * 2.0
@@ -415,6 +434,10 @@ class RAGTrainer(GRPOTrainer):
             avg_steps = np.mean([len(e.trajectory) for e in active_envs])
             self._metrics[mode].setdefault("rollout/avg_steps", []).append(avg_steps)
         
+        del active_envs  
+        gc.collect()
+        torch.cuda.empty_cache() 
+
         return {
             "prompt_ids": prompt_ids_padded,       
             "prompt_mask": prompt_mask,            
@@ -427,6 +450,22 @@ class RAGTrainer(GRPOTrainer):
 
     def _compute_loss(self, model, inputs):
         torch.cuda.empty_cache() 
+
+        if self.accelerator.is_main_process:
+            p_shape = inputs["prompt_ids"].shape
+            c_shape = inputs["completion_ids"].shape
+            total_len = p_shape[1] + c_shape[1]
+            
+            mem_alloc = torch.cuda.memory_allocated() / (1024 ** 3)
+            mem_res = torch.cuda.memory_reserved() / (1024 ** 3)
+            max_alloc = torch.cuda.max_memory_allocated() / (1024 ** 3)
+            
+            print(f"\n[DEBUG Step Loss] ===================================")
+            print(f"Input Shape: Prompt {p_shape} + Completion {c_shape} = Total Seq Len: {total_len}")
+            print(f"Batch Size: {p_shape[0]} (Check if accumulation adds up)")
+            print(f"GPU Memory: Alloc={mem_alloc:.2f}GB | Reserved={mem_res:.2f}GB | Peak={max_alloc:.2f}GB")
+            print(f"=====================================================\n")
+
         prompt_ids, prompt_mask = inputs["prompt_ids"], inputs["prompt_mask"]
         completion_ids, completion_mask = inputs["completion_ids"], inputs["completion_mask"]
         advantages = inputs["advantages"]
@@ -439,7 +478,7 @@ class RAGTrainer(GRPOTrainer):
         
         num_samples = input_ids.size(0)
         total_loss_tensor = 0.0 
-        chunk_size = 4
+        chunk_size = 1
         stats = {
             "policy_loss": 0.0,
             "kl_loss": 0.0,
@@ -511,13 +550,16 @@ class RAGTrainer(GRPOTrainer):
 
     def _get_per_token_logps_and_entropies(self, model, input_ids, attention_mask, logits_to_keep, compute_entropy=False):
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        logits = outputs.logits
-        logits = logits[:, -logits_to_keep:, :]
-        log_probs = F.log_softmax(logits, dim=-1)
+        logits = outputs.logits[:, -logits_to_keep:, :].clone() 
         
-        del logits, outputs
-
+        del outputs
+        torch.cuda.empty_cache() 
+        
+        log_probs = F.log_softmax(logits, dim=-1)
         completion_input_ids = input_ids[:, -logits_to_keep:]
         per_token_logps = torch.gather(log_probs, -1, completion_input_ids.unsqueeze(-1)).squeeze(-1)
+
+        del logits
+        torch.cuda.empty_cache() 
         
         return per_token_logps, None

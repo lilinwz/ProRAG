@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1" 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
 
 import json
 import re
@@ -11,9 +11,9 @@ from typing import List, Dict, Any
 from sentence_transformers import SentenceTransformer
 from vllm import LLM, SamplingParams
 
-MODEL_PATH = "/home/aiscuser/ds/zhaowang/rag/save/sft"
-TEST_DATA_PATH = "/home/aiscuser/ds/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_dev.jsonl"
-OUTPUT_RESULTS_FILE = "/home/aiscuser/ds/zhaowang/rag/test/results/ours_sft.jsonl"
+MODEL_PATH = "/home/v-zhaowan/local_models/rag_rl"
+TEST_DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_dev.jsonl"
+OUTPUT_RESULTS_FILE = "/home/aiscuser/ds/zhaowang/rag/test/results/ours_rl.jsonl"
 E5_MODEL_NAME = 'intfloat/e5-large-v2'
 
 MAX_TOKENS = 1024
