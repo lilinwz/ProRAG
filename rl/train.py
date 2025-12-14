@@ -16,8 +16,8 @@ import os
 
 # --- 配置路径 ---
 DATA_PATH = "/home/aiscuser/ds/zhaowang/rag/data/train_rl_tmp.jsonl"
-MODEL_PATH = "/home/aiscuser/ds/zhaowang/rag/save/sft/checkpoint-770"
-PRM_PATH = "/home/aiscuser/ds/zhaowang/rag/save/rm"
+MODEL_PATH = "/home/aiscuser/ds/zhaowang/rag/save/sft"
+PRM_PATH = "/home/aiscuser/ds/zhaowang/rag/save/prm"
 E5_MODEL_NAME = 'intfloat/e5-large-v2'
 OUTPUT_DIR = "/home/aiscuser/ds/zhaowang/rag/save/rl"
 

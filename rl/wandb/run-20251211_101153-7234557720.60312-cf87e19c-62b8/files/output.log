@@ -1,0 +1,273 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/476 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 7
+--------------------
+ Step 1:
+>>> Prompt (Partial): o filmed Live at the Beacon Theater lives?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+>>> Completion: The user is asking about the body of water near the city where a specific person lives. To begin, I need to identify who filmed 'Live at the Beacon Theater,' as this will help me trace their location.</step>
+<subquery>
+Who filmed Live at the Beacon Theater?</subquery>
+<retrieval>
+Title: Live at the Beacon Theater
+Live at the Beacon Theater is the fourth full-length comedy special/concert film by comedian Louis C.K.. The special takes place at the Beacon Theatre in Manhattan, New York.
+</retrieval>
+
+>>> PRM Score: -2.5469, Format Score: 1.0000
+--------------------
+ Step 2:
+>>> Prompt (Partial): uis C.K.. The special takes place at the Beacon Theatre in Manhattan, New York.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph mentions that 'Live at the Beacon Theater' is a film by Louis C.K. This directly answers my first subquery, so now I know the person involved is Louis C.K.</step>
+<subanswer>
+Louis C.K.</subanswer>
+
+>>> PRM Score: -1.2578, Format Score: 1.0000
+--------------------
+ Step 3:
+>>> Prompt (Partial): y, so now I know the person involved is Louis C.K.</step>
+<subanswer>
+Louis C.K.</subanswer>
+<step>
+
+>>> Completion: Now that I know Louis C.K. is the person in question, the next step is to determine where he lives. This will help me identify the city relevant to the user's question.</step>
+<subquery>
+Where does Louis C.K. live?</subquery>
+<retrieval>
+Title: Live at the Beacon Theater
+Live at the Beacon Theater is the fourth full-length comedy special/concert film by comedian Louis C.K.. The special takes place at the Beacon Theatre in Manhattan, New York.
+</retrieval>
+
+>>> PRM Score: -4.1250, Format Score: 1.0000
+--------------------
+ Step 4:
+>>> Prompt (Partial): uis C.K.. The special takes place at the Beacon Theatre in Manhattan, New York.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph specifies that Louis C.K. lives in Manhattan, New York. This is the key detail I need to proceed to the next step.</step>
+<subanswer>
+Manhattan</subanswer>
+
+>>> PRM Score: -2.8594, Format Score: 1.0000
+--------------------
+ Step 5:
+>>> Prompt (Partial):  the key detail I need to proceed to the next step.</step>
+<subanswer>
+Manhattan</subanswer>
+<step>
+
+>>> Completion: Since I now know that Louis C.K. lives in Manhattan, the next logical step is to find out which body of water is near Manhattan. This will directly answer the user's question.</step>
+<subquery>
+Which body of water is near Manhattan?</subquery>
+<retrieval>
+Title: Boston
+Boston is surrounded by the "Greater Boston" region and is contiguously bordered by the cities and towns of Winthrop, Revere, Chelsea, Everett, Somerville, Cambridge, Watertown, Newton, Brookline, Needham, Dedham, Canton, Milton, and Quincy. The Charles River separates Boston from Watertown and the majority of Cambridge, and the mass of Boston from its own Charlestown neighborhood. To the east lie Boston Harbor and the Boston Harbor Islands National Recreation Area (which includes part of the city's territory, specifically Calf Island, Gallops Island, Great Brewster Island, Green Island, Little Brewster Island, Little Calf Island, Long Island, Lovells Island, Middle Brewster Island, Nixes Mate, Outer Brewster Island, Rainsford Island, Shag Rocks, Spectacle Island, The Graves, and Thompson Island). The Neponset River forms the boundary between Boston's southern neighborhoods and the city of Quincy and the town of Milton. The Mystic River separates Charlestown from Chelsea and Everett, and Chelsea Creek and Boston Harbor separate East Boston from Downtown, the North End, and the Seaport.
+</retrieval>
+
+>>> PRM Score: -2.3281, Format Score: 1.0000
+--------------------
+ Step 6:
+>>> Prompt (Partial): ston Harbor separate East Boston from Downtown, the North End, and the Seaport.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph mentions several bodies of water near Boston and its surroundings, including the Mystic River, which separates Charlestown from Chelsea and Everett. This is the relevant detail for my query.</step>
+<subanswer>
+Mystic River</subanswer>
+
+>>> PRM Score: -4.5625, Format Score: 1.0000
+--------------------
+ Step 7:
+>>> Prompt (Partial): erett. This is the relevant detail for my query.</step>
+<subanswer>
+Mystic River</subanswer>
+<step>
+
+>>> Completion: I now have all the necessary information: Louis C.K. lives in Manhattan, and the Mystic River is a body of water near Manhattan. Combining these findings, the body of water near the city where the person who filmed 'Live at the Beacon Theater' lives is the Mystic River.</step>
+<answer>
+Mystic River</answer>
+
+>>> PRM Score: -2.2969, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================
+  0%|          | 1/476 [12:48<101:18:42, 767.84s/it]
+
+{'loss': 0.0, 'grad_norm': 0.31443706154823303, 'learning_rate': 1e-06, 'rollout/outcome_reward_mean': 3.0, 'rollout/accuracy_mean': 1.0, 'rollout/format_reward_mean': 1.0, 'rollout/prm_score_mean': -2.6052000863211497, 'rollout/step_format_score_mean': 1.0, 'rollout/advantage_mean': 4.865880067684629e-08, 'rollout/avg_steps': 7.0, 'loss/policy_loss': -0.009361947027872181, 'logps/kl': 8.938368768529619e-08, 'logps/clip_ratio': 0.0, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 5
+--------------------
+ Step 1:
+>>> Prompt (Partial): r of what king also known as Frederick II?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+>>> Completion: The user is asking about Princess Wilhelmine Ernestine of Denmark and mentions that her father was also known as Frederick II. My first step is to determine the regnal name of the king whose daughter she was, as this will help clarify the connection.</step>
+<subquery>
+What was the regnal name of the king who was also known as Frederick II?</subquery>
+<retrieval>
+Title: Frederick III of Denmark
+Frederick III (Danish: "Frederik" ; 18 March 1609 – 9 February 1670) was king of Denmark and Norway from 1648 until his death in 1670.
+ He also governed under the name Frederick II as diocesan administrator (colloquially referred to as prince-bishop) of the Prince-Bishopric of Verden (1623–29 and again 1634–44), and the Prince-Archbishopric of Bremen (1635–45).
+</retrieval>
+
+>>> PRM Score: -4.5625, Format Score: 1.0000
+--------------------
+ Step 2:
+>>> Prompt (Partial):  (1623–29 and again 1634–44), and the Prince-Archbishopric of Bremen (1635–45).
+</retrieval>
+<step>
+
+>>> Completion: The paragraph provides information about Frederick II, also known as Frederick III of Denmark. This establishes that Frederick II was the regnal name of the king in question.</step>
+<subanswer>
+Frederick III</subanswer>
+
+>>> PRM Score: -2.8750, Format Score: 1.0000
+--------------------
+ Step 3:
+>>> Prompt (Partial): II was the regnal name of the king in question.</step>
+<subanswer>
+Frederick III</subanswer>
+<step>
+
+>>> Completion: Now that I know Frederick II refers to Frederick III of Denmark, I need to confirm the mother of Princess Wilhelmine Ernestine to ensure the lineage connects to this king.</step>
+<subquery>
+Who was the mother of Princess Wilhelmine Ernestine of Denmark?</subquery>
+<retrieval>
+Title: Princess Wilhelmine Ernestine of Denmark
+Wilhelmine Ernestine of Denmark and Norway (Danish: "Vilhelmine Ernestine" , German: "Wilhelmine Ernestine" ) of Denmark (born 20 or 21 June 1650 – died 22 or 23 April 1706) was an Electress of the Palatinate.
+ She was the third of five daughters of King Frederick III of Denmark and Sophie Amalie of Brunswick-Lüneburg.
+</retrieval>
+
+>>> PRM Score: -1.6094, Format Score: 1.0000
+--------------------
+ Step 4:
+>>> Prompt (Partial): hters of King Frederick III of Denmark and Sophie Amalie of Brunswick-Lüneburg.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph states that Wilhelmine Ernestine's mother was Sophie Amalie of Brunswick-Lüneburg, and her father was Frederick III of Denmark. This confirms the king's identity as Frederick III.</step>
+<subanswer>
+Sophie Amalie of Brunswick-Lüneburg</subanswer>
+
+>>> PRM Score: -1.6953, Format Score: 1.0000
+--------------------
+ Step 5:
+>>> Prompt (Partial): dentity as Frederick III.</step>
+<subanswer>
+Sophie Amalie of Brunswick-Lüneburg</subanswer>
+<step>
+
+>>> Completion: I now know that Frederick II refers to Frederick III of Denmark and that Wilhelmine Ernestine's father was Frederick III. Combining this information, the answer to the user's question is Frederick III.</step>
+<answer>
+Frederick III</answer>
+
+>>> PRM Score: -0.4844, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 0.0059, 'grad_norm': 0.35131868720054626, 'learning_rate': 9.978991596638655e-07, 'rollout/outcome_reward_mean': 1.0, 'rollout/accuracy_mean': 0.0, 'rollout/format_reward_mean': 1.0, 'rollout/prm_score_mean': -1.9091090556210693, 'rollout/step_format_score_mean': 1.0, 'rollout/advantage_mean': 1.3467438983188085e-08, 'rollout/avg_steps': 4.96875, 'loss/policy_loss': 0.16714880951440186, 'logps/kl': -1.589623121954765e-05, 'logps/clip_ratio': 0.005490183409238873, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 5
+--------------------
+ Step 1:
+>>> Prompt (Partial): s endemic to Australia, Retama or Baeckea?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+>>> Completion: The user is asking about the genus of plants that is endemic to Australia, specifically comparing Retama and Baeckea. To determine which genus is endemic, I need to investigate the origins of these plants. I'll start by finding out where the genus Retama originates from, as this will help me understand its geographical association.</step>
+<subquery>
+Where does the genus Retama originate from?</subquery>
+<retrieval>
+Title: Retama
+Retama is a genus of flowering bushes in the legume family, Fabaceae.
+ It belongs to the broom tribe, Genisteae.
+ "Retama" broom bushes are found natively in North Africa, the Levant and some parts of southern Europe.
+ "Retama raetam" and "Retama monosperma" have white flowers, while "Retama sphaerocarpa" has yellow flowers.
+ It remains an open question in taxonomy whether the members of the "Retama" genus should be incorporated into the genus "Genista" (see Genisteae).
+ The name traces itself to the Hebrew "רותם (Pronounced Rotem)"
+</retrieval>
+
+>>> PRM Score: -1.2188, Format Score: 1.0000
+--------------------
+ Step 2:
+>>> Prompt (Partial): see Genisteae).
+ The name traces itself to the Hebrew "רותם (Pronounced Rotem)"
+</retrieval>
+<step>
+
+>>> Completion: From the paragraph provided, I can see that Retama is a genus of flowering bushes in the legume family. It mentions that Retama is natively found in North Africa, the Levant, and some parts of southern Europe. This indicates that Retama does not originate from Australia.</step>
+<subanswer>
+North Africa, the Levant, and some parts of southern Europe</subanswer>
+
+>>> PRM Score: -1.3906, Format Score: 1.0000
+--------------------
+ Step 3:
+>>> Prompt (Partial): .</step>
+<subanswer>
+North Africa, the Levant, and some parts of southern Europe</subanswer>
+<step>
+
+>>> Completion: Now that I know Retama is not endemic to Australia, I need to investigate the genus Baeckea to determine its origin. This will help me determine whether it is associated with Australia.</step>
+<subquery>
+Where does the genus Baeckea originate from?</subquery>
+<retrieval>
+Title: Baeckea
+Baeckea is a genus of flowering plants in the myrtle family, Myrtaceae.
+ There are about 75 species, of which 70 are endemic to Australia; the others are distributed in New Caledonia and Southeast Asia.
+</retrieval>
+
+>>> PRM Score: 1.5078, Format Score: 1.0000
+--------------------
+ Step 4:
+>>> Prompt (Partial): c to Australia; the others are distributed in New Caledonia and Southeast Asia.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph on Baeckea explains that it is a genus of flowering plants in the myrtle family. It states that 70 species are endemic to Australia, while others are found in New Caledonia and Southeast Asia. This confirms that Baeckea is strongly associated with Australia.</step>
+<subanswer>
+Endemic to Australia</subanswer>
+
+>>> PRM Score: 1.1406, Format Score: 1.0000
+--------------------
+ Step 5:
+>>> Prompt (Partial): a is strongly associated with Australia.</step>
+<subanswer>
+Endemic to Australia</subanswer>
+<step>
+
+>>> Completion: I now know that Retama is not endemic to Australia, as it originates from North Africa, the Levant, and parts of southern Europe. In contrast, Baeckea is described as being endemic to Australia. Therefore, the genus of plants endemic to Australia is Baeckea.</step>
+<answer>
+Baeckea</answer>
+
+>>> PRM Score: 2.5938, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================

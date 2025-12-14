@@ -1,0 +1,232 @@
+  0%|                                                                                                                                              | 0/315 [00:00<?, ?it/s]You're using a Qwen2TokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
+`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
+ 32%|█████████████████████████████████████████▎                                                                                        | 100/315 [37:11<1:13:40, 20.56s/it]
+{'loss': 0.624, 'grad_norm': 4.424798011779785, 'learning_rate': 4.857142857142858e-06, 'epoch': 0.1}
+{'loss': 0.5435, 'grad_norm': 2.824958086013794, 'learning_rate': 4.698412698412699e-06, 'epoch': 0.19}
+{'loss': 0.5255, 'grad_norm': 3.276907205581665, 'learning_rate': 4.53968253968254e-06, 'epoch': 0.29}
+{'loss': 0.4807, 'grad_norm': 2.602623224258423, 'learning_rate': 4.3809523809523815e-06, 'epoch': 0.38}
+{'loss': 0.4425, 'grad_norm': 2.046929359436035, 'learning_rate': 4.222222222222223e-06, 'epoch': 0.48}
+{'loss': 0.4598, 'grad_norm': 3.264070987701416, 'learning_rate': 4.063492063492064e-06, 'epoch': 0.57}
+{'loss': 0.4341, 'grad_norm': 2.7975234985351562, 'learning_rate': 3.9047619047619055e-06, 'epoch': 0.67}
+{'loss': 0.4369, 'grad_norm': 2.0499649047851562, 'learning_rate': 3.7460317460317463e-06, 'epoch': 0.77}
+{'loss': 0.4236, 'grad_norm': 2.713404417037964, 'learning_rate': 3.5873015873015877e-06, 'epoch': 0.86}
+{'loss': 0.4012, 'grad_norm': 2.998314380645752, 'learning_rate': 3.428571428571429e-06, 'epoch': 0.96}
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃[1m [0m[1mchosen_text                                                              [0m[1m [0m┃[1m [0m[1mrejected_text                                                           [0m[1m [0m┃[1m [0m[1mlogits          [0m[1m [0m┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ <step>                                                                    │ <step>                                                                   │ [0.3945, 0.6055] │
+│ Now that I know the CBS station owned by the Meredith Corporation is      │ Now that I know KMOV is the CBS station owned by the Meredith            │                  │
+│ KMOV, my next step is to determine which CBS station produced D. B.'s     │ Corporation, the next logical step is to determine if KMOV was the       │                  │
+│ Delight. This will help identify the station that aired the show.</step>  │ station that produced D. B.'s Delight. This will help confirm the        │                  │
+│ <subquery>                                                                │ connection between the station and the show.</step>                      │                  │
+│ What CBS station produced D. B.'s Delight?</subquery>                     │ <subquery>                                                               │                  │
+│ <retrieval>Title: D. B.'s Delight                                         │ Which station was the station of origin for D. B.'s Delight?</subquery>  │                  │
+│ D.B.'s Delight is a locally produced St. Louis, Missouri children's       │ <retrieval>Title: D. B.'s Delight                                        │                  │
+│ television quiz show produced by CBS-owned affiliate KMOX-TV (later       │ D.B.'s Delight is a locally produced St. Louis, Missouri children's      │                  │
+│ KMOV), Channel 4.                                                         │ television quiz show produced by CBS-owned affiliate KMOX-TV (later      │                  │
+│  The show ran 30 minutes on Saturdays and Sundays and aired in St. Louis  │ KMOV), Channel 4.                                                        │                  │
+│ from 1977 to 1988.                                                        │  The show ran 30 minutes on Saturdays and Sundays and aired in St. Louis │                  │
+│ </retrieval>                                                              │ from 1977 to 1988.                                                       │                  │
+│                                                                           │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [0.9922, 0.0071] │
+│ Now that I know Emil Forselius died in Stockholm, my next step is to      │ Now that I know Emil Forselius died in Stockholm, I need to determine    │                  │
+│ determine the country where Stockholm is located. This is necessary to    │ the country where the Embassy of France is located in Stockholm. This    │                  │
+│ connect the city to the Embassy of France mentioned in the                │ will help me identify the country relevant to the question.</step>       │                  │
+│ question.</step>                                                          │ <subquery>                                                               │                  │
+│ <subquery>                                                                │ In which country is the Embassy of France located in the city where Emil │                  │
+│ In which country is the Embassy of France located in                      │ Forselius died?</subquery>                                               │                  │
+│ Stockholm?</subquery>                                                     │ <retrieval>Title: Emil Forselius                                         │                  │
+│ <retrieval>Title: Embassy of France, Stockholm                            │ Emil Forselius was found dead in his apartment in Stockholm on 2 March,  │                  │
+│ The Embassy of France in Stockholm is the diplomatic mission of the       │ 2010. The cause of death was suicide. He had left a farewell letter.     │                  │
+│ French Republic in Sweden. The chancery is located at Kommendörsgatan 13. │ Forselius had suffered from severe depression for some time.             │                  │
+│ </retrieval>                                                              │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [0.5703, 0.4277] │
+│ The paragraph describes Pherenikos as an Ancient Greek racehorse          │ The paragraph reveals that Pherenikos is an ancient Greek racehorse,     │                  │
+│ celebrated for its victories at the Olympic and Pythian Games. It also    │ described as a 'victory-bearer.' This establishes its connection to the  │                  │
+│ notes that Pherenikos is referenced in the victory odes of Pindar and     │ victory theme, which aligns with the nature of epinikions.</step>        │                  │
+│ Bacchylides, which ties it directly to the epinikion genre.</step>        │ <subanswer>                                                              │                  │
+│ <subanswer>                                                               │ An ancient Greek chestnut racehorse.</subanswer>                         │                  │
+│ An Ancient Greek racehorse.</subanswer>                                   │                                                                          │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [0.8594, 0.1387] │
+│ I now have all the information I need. D-Day, also known as the Allied    │ Now that I know Operation Overlord is the code name for D-Day, I need to │                  │
+│ invasion of Normandy, was officially called Operation Overlord. Combining │ verify that Operation Overlord indeed refers to the same event. I’ll     │                  │
+│ this, the final answer is Operation Overlord.</step>                      │ check if the code name for the Allied operation at Normandy aligns with  │                  │
+│ <answer>                                                                  │ what I’ve established.</step>                                            │                  │
+│ Operation Overlord</answer>                                               │ <subquery>                                                               │                  │
+│                                                                           │ What was the code name for the Allied operation at Normandy?</subquery>  │                  │
+│                                                                           │ <retrieval>Title: Operation Overlord                                     │                  │
+│                                                                           │ Operation Overlord was the codename for the Battle of Normandy, the      │                  │
+│                                                                           │ Allied operation that launched the successful invasion of                │                  │
+│                                                                           │ German-occupied Western Europe during World War II.                      │                  │
+│                                                                           │  The operation was launched on 6 June 1944 with the Normandy landings    │                  │
+│                                                                           │ (Operation Neptune, commonly known as D-Day).                            │                  │
+│                                                                           │  A 1,200-plane airborne assault preceded an amphibious assault involving │                  │
+│                                                                           │ more than 5,000 vessels.                                                 │                  │
+│                                                                           │  Nearly 160,000 troops crossed the English Channel on 6 June, and more   │                  │
+│                                                                           │ than two million Allied troops were in France by the end of August.      │                  │
+│                                                                           │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+└───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────┴──────────────────┘
+  warnings.warn(███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 93/93 [00:30<00:00,  3.23it/s]
+ 63%|██████████████████████████████████████████████████████████████████████████████████▌                                               | 200/315 [1:14:41<38:56, 20.32s/it]
+                                                                                                                                                                           
+{'eval_loss': 0.40138953924179077, 'eval_accuracy': 0.8158516020236087, 'eval_runtime': 30.6179, 'eval_samples_per_second': 97.002, 'eval_steps_per_second': 3.037, 'epoch': 0.96}
+{'loss': 0.3988, 'grad_norm': 2.2069897651672363, 'learning_rate': 3.2698412698412703e-06, 'epoch': 1.05}
+{'loss': 0.3749, 'grad_norm': 2.385420083999634, 'learning_rate': 3.1111111111111116e-06, 'epoch': 1.14}
+{'loss': 0.3653, 'grad_norm': 2.902111530303955, 'learning_rate': 2.9523809523809525e-06, 'epoch': 1.24}
+{'loss': 0.3548, 'grad_norm': 1.7877172231674194, 'learning_rate': 2.7936507936507938e-06, 'epoch': 1.33}
+{'loss': 0.3511, 'grad_norm': 22.117218017578125, 'learning_rate': 2.634920634920635e-06, 'epoch': 1.43}
+{'loss': 0.3436, 'grad_norm': 2.5505340099334717, 'learning_rate': 2.4761904761904764e-06, 'epoch': 1.53}
+{'loss': 0.3588, 'grad_norm': 2.5139596462249756, 'learning_rate': 2.3174603174603177e-06, 'epoch': 1.62}
+{'loss': 0.3391, 'grad_norm': 2.290055274963379, 'learning_rate': 2.158730158730159e-06, 'epoch': 1.72}
+{'loss': 0.3491, 'grad_norm': 2.3278214931488037, 'learning_rate': 2.0000000000000003e-06, 'epoch': 1.81}
+{'loss': 0.338, 'grad_norm': 3.6266982555389404, 'learning_rate': 1.8412698412698416e-06, 'epoch': 1.91}
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃[1m [0m[1mchosen_text                                                              [0m[1m [0m┃[1m [0m[1mrejected_text                                                           [0m[1m [0m┃[1m [0m[1mlogits          [0m[1m [0m┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ <step>                                                                    │ <step>                                                                   │ [0.2021, 0.7969] │
+│ Now that I know the CBS station owned by the Meredith Corporation is      │ Now that I know KMOV is the CBS station owned by the Meredith            │                  │
+│ KMOV, my next step is to determine which CBS station produced D. B.'s     │ Corporation, the next logical step is to determine if KMOV was the       │                  │
+│ Delight. This will help identify the station that aired the show.</step>  │ station that produced D. B.'s Delight. This will help confirm the        │                  │
+│ <subquery>                                                                │ connection between the station and the show.</step>                      │                  │
+│ What CBS station produced D. B.'s Delight?</subquery>                     │ <subquery>                                                               │                  │
+│ <retrieval>Title: D. B.'s Delight                                         │ Which station was the station of origin for D. B.'s Delight?</subquery>  │                  │
+│ D.B.'s Delight is a locally produced St. Louis, Missouri children's       │ <retrieval>Title: D. B.'s Delight                                        │                  │
+│ television quiz show produced by CBS-owned affiliate KMOX-TV (later       │ D.B.'s Delight is a locally produced St. Louis, Missouri children's      │                  │
+│ KMOV), Channel 4.                                                         │ television quiz show produced by CBS-owned affiliate KMOX-TV (later      │                  │
+│  The show ran 30 minutes on Saturdays and Sundays and aired in St. Louis  │ KMOV), Channel 4.                                                        │                  │
+│ from 1977 to 1988.                                                        │  The show ran 30 minutes on Saturdays and Sundays and aired in St. Louis │                  │
+│ </retrieval>                                                              │ from 1977 to 1988.                                                       │                  │
+│                                                                           │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [1.0, 0.0015]    │
+│ Now that I know Emil Forselius died in Stockholm, my next step is to      │ Now that I know Emil Forselius died in Stockholm, I need to determine    │                  │
+│ determine the country where Stockholm is located. This is necessary to    │ the country where the Embassy of France is located in Stockholm. This    │                  │
+│ connect the city to the Embassy of France mentioned in the                │ will help me identify the country relevant to the question.</step>       │                  │
+│ question.</step>                                                          │ <subquery>                                                               │                  │
+│ <subquery>                                                                │ In which country is the Embassy of France located in the city where Emil │                  │
+│ In which country is the Embassy of France located in                      │ Forselius died?</subquery>                                               │                  │
+│ Stockholm?</subquery>                                                     │ <retrieval>Title: Emil Forselius                                         │                  │
+│ <retrieval>Title: Embassy of France, Stockholm                            │ Emil Forselius was found dead in his apartment in Stockholm on 2 March,  │                  │
+│ The Embassy of France in Stockholm is the diplomatic mission of the       │ 2010. The cause of death was suicide. He had left a farewell letter.     │                  │
+│ French Republic in Sweden. The chancery is located at Kommendörsgatan 13. │ Forselius had suffered from severe depression for some time.             │                  │
+│ </retrieval>                                                              │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [0.8125, 0.1885] │
+│ The paragraph describes Pherenikos as an Ancient Greek racehorse          │ The paragraph reveals that Pherenikos is an ancient Greek racehorse,     │                  │
+│ celebrated for its victories at the Olympic and Pythian Games. It also    │ described as a 'victory-bearer.' This establishes its connection to the  │                  │
+│ notes that Pherenikos is referenced in the victory odes of Pindar and     │ victory theme, which aligns with the nature of epinikions.</step>        │                  │
+│ Bacchylides, which ties it directly to the epinikion genre.</step>        │ <subanswer>                                                              │                  │
+│ <subanswer>                                                               │ An ancient Greek chestnut racehorse.</subanswer>                         │                  │
+│ An Ancient Greek racehorse.</subanswer>                                   │                                                                          │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [0.7969, 0.2051] │
+│ I now have all the information I need. D-Day, also known as the Allied    │ Now that I know Operation Overlord is the code name for D-Day, I need to │                  │
+│ invasion of Normandy, was officially called Operation Overlord. Combining │ verify that Operation Overlord indeed refers to the same event. I’ll     │                  │
+│ this, the final answer is Operation Overlord.</step>                      │ check if the code name for the Allied operation at Normandy aligns with  │                  │
+│ <answer>                                                                  │ what I’ve established.</step>                                            │                  │
+│ Operation Overlord</answer>                                               │ <subquery>                                                               │                  │
+│                                                                           │ What was the code name for the Allied operation at Normandy?</subquery>  │                  │
+│                                                                           │ <retrieval>Title: Operation Overlord                                     │                  │
+│                                                                           │ Operation Overlord was the codename for the Battle of Normandy, the      │                  │
+│                                                                           │ Allied operation that launched the successful invasion of                │                  │
+│                                                                           │ German-occupied Western Europe during World War II.                      │                  │
+│                                                                           │  The operation was launched on 6 June 1944 with the Normandy landings    │                  │
+│                                                                           │ (Operation Neptune, commonly known as D-Day).                            │                  │
+│                                                                           │  A 1,200-plane airborne assault preceded an amphibious assault involving │                  │
+│                                                                           │ more than 5,000 vessels.                                                 │                  │
+│                                                                           │  Nearly 160,000 troops crossed the English Channel on 6 June, and more   │                  │
+│                                                                           │ than two million Allied troops were in France by the end of August.      │                  │
+│                                                                           │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+└───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────┴──────────────────┘
+ 95%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▊      | 300/315 [1:52:10<05:13, 20.87s/it]
+                                                                                                                                                                           
+{'eval_loss': 0.34488505125045776, 'eval_accuracy': 0.8491074435836982, 'eval_runtime': 30.6535, 'eval_samples_per_second': 96.889, 'eval_steps_per_second': 3.034, 'epoch': 1.91}
+{'loss': 0.3336, 'grad_norm': 3.9498322010040283, 'learning_rate': 1.6825396825396827e-06, 'epoch': 2.0}
+{'loss': 0.2818, 'grad_norm': 2.271381139755249, 'learning_rate': 1.523809523809524e-06, 'epoch': 2.1}
+{'loss': 0.2834, 'grad_norm': 2.6709508895874023, 'learning_rate': 1.3650793650793652e-06, 'epoch': 2.19}
+{'loss': 0.2778, 'grad_norm': 2.5427944660186768, 'learning_rate': 1.2063492063492065e-06, 'epoch': 2.29}
+{'loss': 0.2843, 'grad_norm': 3.4724433422088623, 'learning_rate': 1.0476190476190478e-06, 'epoch': 2.38}
+{'loss': 0.289, 'grad_norm': 1.8807834386825562, 'learning_rate': 8.88888888888889e-07, 'epoch': 2.48}
+{'loss': 0.2812, 'grad_norm': 2.8585565090179443, 'learning_rate': 7.301587301587303e-07, 'epoch': 2.57}
+{'loss': 0.2467, 'grad_norm': 2.651482105255127, 'learning_rate': 5.714285714285715e-07, 'epoch': 2.67}
+{'loss': 0.2816, 'grad_norm': 3.1680173873901367, 'learning_rate': 4.126984126984127e-07, 'epoch': 2.77}
+{'loss': 0.2778, 'grad_norm': 2.7146847248077393, 'learning_rate': 2.53968253968254e-07, 'epoch': 2.86}
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃[1m [0m[1mchosen_text                                                              [0m[1m [0m┃[1m [0m[1mrejected_text                                                           [0m[1m [0m┃[1m [0m[1mlogits          [0m[1m [0m┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ <step>                                                                    │ <step>                                                                   │ [0.1602, 0.8398] │
+│ Now that I know the CBS station owned by the Meredith Corporation is      │ Now that I know KMOV is the CBS station owned by the Meredith            │                  │
+│ KMOV, my next step is to determine which CBS station produced D. B.'s     │ Corporation, the next logical step is to determine if KMOV was the       │                  │
+│ Delight. This will help identify the station that aired the show.</step>  │ station that produced D. B.'s Delight. This will help confirm the        │                  │
+│ <subquery>                                                                │ connection between the station and the show.</step>                      │                  │
+│ What CBS station produced D. B.'s Delight?</subquery>                     │ <subquery>                                                               │                  │
+│ <retrieval>Title: D. B.'s Delight                                         │ Which station was the station of origin for D. B.'s Delight?</subquery>  │                  │
+│ D.B.'s Delight is a locally produced St. Louis, Missouri children's       │ <retrieval>Title: D. B.'s Delight                                        │                  │
+│ television quiz show produced by CBS-owned affiliate KMOX-TV (later       │ D.B.'s Delight is a locally produced St. Louis, Missouri children's      │                  │
+│ KMOV), Channel 4.                                                         │ television quiz show produced by CBS-owned affiliate KMOX-TV (later      │                  │
+│  The show ran 30 minutes on Saturdays and Sundays and aired in St. Louis  │ KMOV), Channel 4.                                                        │                  │
+│ from 1977 to 1988.                                                        │  The show ran 30 minutes on Saturdays and Sundays and aired in St. Louis │                  │
+│ </retrieval>                                                              │ from 1977 to 1988.                                                       │                  │
+│                                                                           │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [0.9961, 0.0028] │
+│ Now that I know Emil Forselius died in Stockholm, my next step is to      │ Now that I know Emil Forselius died in Stockholm, I need to determine    │                  │
+│ determine the country where Stockholm is located. This is necessary to    │ the country where the Embassy of France is located in Stockholm. This    │                  │
+│ connect the city to the Embassy of France mentioned in the                │ will help me identify the country relevant to the question.</step>       │                  │
+│ question.</step>                                                          │ <subquery>                                                               │                  │
+│ <subquery>                                                                │ In which country is the Embassy of France located in the city where Emil │                  │
+│ In which country is the Embassy of France located in                      │ Forselius died?</subquery>                                               │                  │
+│ Stockholm?</subquery>                                                     │ <retrieval>Title: Emil Forselius                                         │                  │
+│ <retrieval>Title: Embassy of France, Stockholm                            │ Emil Forselius was found dead in his apartment in Stockholm on 2 March,  │                  │
+│ The Embassy of France in Stockholm is the diplomatic mission of the       │ 2010. The cause of death was suicide. He had left a farewell letter.     │                  │
+│ French Republic in Sweden. The chancery is located at Kommendörsgatan 13. │ Forselius had suffered from severe depression for some time.             │                  │
+│ </retrieval>                                                              │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [0.7773, 0.2227] │
+│ The paragraph describes Pherenikos as an Ancient Greek racehorse          │ The paragraph reveals that Pherenikos is an ancient Greek racehorse,     │                  │
+│ celebrated for its victories at the Olympic and Pythian Games. It also    │ described as a 'victory-bearer.' This establishes its connection to the  │                  │
+│ notes that Pherenikos is referenced in the victory odes of Pindar and     │ victory theme, which aligns with the nature of epinikions.</step>        │                  │
+│ Bacchylides, which ties it directly to the epinikion genre.</step>        │ <subanswer>                                                              │                  │
+│ <subanswer>                                                               │ An ancient Greek chestnut racehorse.</subanswer>                         │                  │
+│ An Ancient Greek racehorse.</subanswer>                                   │                                                                          │                  │
+│                                                                           │                                                                          │                  │
+├───────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│ <step>                                                                    │ <step>                                                                   │ [0.7188, 0.2832] │
+│ I now have all the information I need. D-Day, also known as the Allied    │ Now that I know Operation Overlord is the code name for D-Day, I need to │                  │
+│ invasion of Normandy, was officially called Operation Overlord. Combining │ verify that Operation Overlord indeed refers to the same event. I’ll     │                  │
+│ this, the final answer is Operation Overlord.</step>                      │ check if the code name for the Allied operation at Normandy aligns with  │                  │
+│ <answer>                                                                  │ what I’ve established.</step>                                            │                  │
+│ Operation Overlord</answer>                                               │ <subquery>                                                               │                  │
+│                                                                           │ What was the code name for the Allied operation at Normandy?</subquery>  │                  │
+│                                                                           │ <retrieval>Title: Operation Overlord                                     │                  │
+│                                                                           │ Operation Overlord was the codename for the Battle of Normandy, the      │                  │
+│                                                                           │ Allied operation that launched the successful invasion of                │                  │
+│                                                                           │ German-occupied Western Europe during World War II.                      │                  │
+│                                                                           │  The operation was launched on 6 June 1944 with the Normandy landings    │                  │
+│                                                                           │ (Operation Neptune, commonly known as D-Day).                            │                  │
+│                                                                           │  A 1,200-plane airborne assault preceded an amphibious assault involving │                  │
+│                                                                           │ more than 5,000 vessels.                                                 │                  │
+│                                                                           │  Nearly 160,000 troops crossed the English Channel on 6 June, and more   │                  │
+│                                                                           │ than two million Allied troops were in France by the end of August.      │                  │
+│                                                                           │ </retrieval>                                                             │                  │
+│                                                                           │                                                                          │                  │
+└───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────┴──────────────────┘
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 315/315 [2:09:56<00:00, 24.75s/it]
+                                                                                                                                                                           
+{'eval_loss': 0.303771436214447, 'eval_accuracy': 0.878032345013477, 'eval_runtime': 30.7976, 'eval_samples_per_second': 96.436, 'eval_steps_per_second': 3.02, 'epoch': 2.86}
+{'loss': 0.2748, 'grad_norm': 2.8741586208343506, 'learning_rate': 9.523809523809525e-08, 'epoch': 2.96}
+{'train_runtime': 7807.7302, 'train_samples_per_second': 10.268, 'train_steps_per_second': 0.04, 'train_loss': 0.36769012572273374, 'epoch': 3.0}
+模型已保存至 /home/aiscuser/ds/zhaowang/rag/save/prm

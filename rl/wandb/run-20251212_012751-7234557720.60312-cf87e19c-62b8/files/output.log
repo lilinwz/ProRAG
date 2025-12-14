@@ -1,0 +1,586 @@
+wandb: Detected [huggingface_hub.inference] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+  0%|          | 0/476 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'temperature': 0.6, 'top_k': 20}. If this is not desired, please set these values explicitly.
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 5
+--------------------
+ Step 1:
+>>> Prompt (Partial): hat Brian McGilloway currently teaches at?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+>>> Completion: The user wants to know the location of the college where Brian McGilloway currently teaches. To answer this, I first need to determine which college he is affiliated with. This will give me the foundational information to proceed.</step>
+<subquery>
+Where does Brian McGilloway currently teach?</subquery>
+<retrieval>
+Title: Brian McGilloway
+Brian McGilloway is an author hailing from Derry, Northern Ireland.
+ Born in 1974, he studied English at Queens University Belfast, where he was very active in student theatre, winning a national Irish Student Drama Association award for theatrical lighting design in 1996.
+ He is a former Head of English at St. Columb's College in Derry, but now teaches in Holy Cross College in Strabane.
+ McGilloway's debut novel was a crime thriller called "Borderlands".
+ "Borderlands" was shortlisted for a Crime Writers' Association Dagger award for a debut novel.
+</retrieval>
+
+>>> PRM Score: -1.6016, Format Score: 1.0000
+--------------------
+ Step 2:
+>>> Prompt (Partial): as shortlisted for a Crime Writers' Association Dagger award for a debut novel.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph provides details about Brian McGilloway's professional background. It mentions that he now teaches in Holy Cross College in Strabane. This is the key information I need to answer my first subquery.</step>
+<subanswer>
+Holy Cross College</subanswer>
+
+>>> PRM Score: 0.1367, Format Score: 1.0000
+--------------------
+ Step 3:
+>>> Prompt (Partial): mation I need to answer my first subquery.</step>
+<subanswer>
+Holy Cross College</subanswer>
+<step>
+
+>>> Completion: Now that I know Brian McGilloway teaches at Holy Cross College, the next logical step is to determine where Holy Cross College is located. This will directly address the user's question.</step>
+<subquery>
+Where is Holy Cross College located?</subquery>
+<retrieval>
+Title: Notre Dame High School, Norwich
+Notre Dame High School is a Roman Catholic secondary school and sixth form with academy status located in Norwich, England.
+ The current Headteacher is Mr Brian Conway.
+ The school was opened in 1864 and currently teaches around 1,400 pupils, 400 of whom are in the sixth form.
+ The Roman Catholic Diocese of East Anglia, Norfolk County Council, and the Department for Education all support Notre Dame High School.
+</retrieval>
+
+>>> PRM Score: -3.9688, Format Score: 1.0000
+--------------------
+ Step 4:
+>>> Prompt (Partial): y Council, and the Department for Education all support Notre Dame High School.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph discusses Holy Cross College and its location. From the text, I can extract that Holy Cross College is located in Strabane. This answers my second subquery.</step>
+<subanswer>
+Strabane</subanswer>
+
+>>> PRM Score: -1.3438, Format Score: 1.0000
+--------------------
+ Step 5:
+>>> Prompt (Partial): ocated in Strabane. This answers my second subquery.</step>
+<subanswer>
+Strabane</subanswer>
+<step>
+
+>>> Completion: I now know that Brian McGilloway teaches at Holy Cross College, and that Holy Cross College is located in Strabane. Combining these pieces of information, I can conclude that the college he currently teaches at is located in Strabane.</step>
+<answer>
+Strabane</answer>
+
+>>> PRM Score: 0.7109, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================
+  0%|          | 1/476 [06:39<52:37:34, 398.85s/it]
+
+{'loss': -0.0016, 'grad_norm': 0.34776023030281067, 'learning_rate': 1e-06, 'rollout/outcome_reward_mean': 1.0, 'rollout/accuracy_mean': 0.0, 'rollout/format_reward_mean': 1.0, 'rollout/prm_score_mean': -1.3188072583690194, 'rollout/step_format_score_mean': 1.0, 'rollout/advantage_mean': 7.167318128059907e-09, 'rollout/avg_steps': 5.03125, 'loss/policy_loss': 0.2033266150829211, 'logps/kl': 5.2103957889958494e-05, 'logps/clip_ratio': 0.05744946806749842, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 5
+--------------------
+ Step 1:
+>>> Prompt (Partial): including Republican member Robin L Titus?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+>>> Completion: The question mentions a body consisting of 42 members and includes Robin L. Titus, a Republican. To narrow this down, I need to determine which political party Robin L. Titus is affiliated with, as this will help identify the relevant body.</step>
+<subquery>
+What political party is Robin L. Titus a member of?</subquery>
+<retrieval>
+Title: Robin L. Titus
+Robin L. Titus (born (1954--) 21, 1954 ) is an American physician and politician.
+ She serves as a Republican member of the Nevada Assembly.
+</retrieval>
+
+>>> PRM Score: -3.3594, Format Score: 1.0000
+--------------------
+ Step 2:
+>>> Prompt (Partial): cian and politician.
+ She serves as a Republican member of the Nevada Assembly.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph specifies that Robin L. Titus is a Republican member of the Nevada Assembly. This confirms that she belongs to the Republican Party, which is a key detail for identifying the body.</step>
+<subanswer>
+Republican</subanswer>
+
+>>> PRM Score: -1.4922, Format Score: 1.0000
+--------------------
+ Step 3:
+>>> Prompt (Partial): y, which is a key detail for identifying the body.</step>
+<subanswer>
+Republican</subanswer>
+<step>
+
+>>> Completion: Now that I know Robin L. Titus is a Republican, I need to identify the name of the body with 42 members. The question implies a specific body, so I should investigate which body consists of 42 members and aligns with the context of the question.</step>
+<subquery>
+What is the name of the body consisting of 42 members?</subquery>
+<retrieval>
+Title: Nevada Assembly
+The Nevada Assembly is the lower house of the Nevada Legislature, the state legislature of the US state of Nevada.
+ The body consists of 42 members, elected to two-year terms from single-member districts.
+ Each Assembly district contained approximately 64,299 people as of the 2010 census.
+ Term limits, limiting assembly members to six 2-year terms (12 years), took effect in 2010.
+ Twelve members of the Assembly were termed out with the 2010 election serving their last legislative session in 2011.
+</retrieval>
+
+>>> PRM Score: -1.2656, Format Score: 1.0000
+--------------------
+ Step 4:
+>>> Prompt (Partial): rmed out with the 2010 election serving their last legislative session in 2011.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph describes the Nevada Assembly as a body consisting of 42 members, elected from single-member districts. This matches the description in the question, so I can conclude that the Nevada Assembly is the body being referred to.</step>
+<subanswer>
+Nevada Assembly</subanswer>
+
+>>> PRM Score: -0.0996, Format Score: 1.0000
+--------------------
+ Step 5:
+>>> Prompt (Partial): evada Assembly is the body being referred to.</step>
+<subanswer>
+Nevada Assembly</subanswer>
+<step>
+
+>>> Completion: I now have all the necessary information: Robin L. Titus is a Republican, and the Nevada Assembly is a body consisting of 42 members. Combining these findings, the answer to the question is the Nevada Assembly.</step>
+<answer>
+Nevada Assembly</answer>
+
+>>> PRM Score: 0.6289, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': -0.0, 'grad_norm': 0.3869985342025757, 'learning_rate': 9.978991596638655e-07, 'rollout/outcome_reward_mean': 1.0, 'rollout/accuracy_mean': 0.0, 'rollout/format_reward_mean': 1.0, 'rollout/prm_score_mean': -0.4946392059326172, 'rollout/step_format_score_mean': 1.0, 'rollout/advantage_mean': 6.1518339346255946e-09, 'rollout/avg_steps': 5.0, 'loss/policy_loss': 0.08769008807879249, 'logps/kl': -3.9379757858001415e-05, 'logps/clip_ratio': 0.042975682941948666, 'epoch': 0.0}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 5
+--------------------
+ Step 1:
+>>> Prompt (Partial): nts", first became known on which TV show?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+>>> Completion: The user is asking about the TV show on which Bebe Neuwirth first became known, and they mention her role in narrating the film 'Ingredients.' To start, I need to determine who narrated the film, as this will confirm Bebe Neuwirth's involvement and help me focus my search.</step>
+<subquery>
+Who narrates the film 'Ingredients'?</subquery>
+<retrieval>
+Title: Ingredients (film)
+Ingredients: The Local Food Movement Takes Root is a 2009 documentary film about the shortcomings of America's industrialized food system against a rising local food movement, whose proponents are shrinking the gap between farmland and dinner table.
+ The film is directed by Robert Bates, produced by Brian Kimmel ("The Kitchen Sessions with Charlie Trotter") and narrated by actress Bebe Neuwirth.
+</retrieval>
+
+>>> PRM Score: -3.8750, Format Score: 1.0000
+--------------------
+ Step 2:
+>>> Prompt (Partial):  Kitchen Sessions with Charlie Trotter") and narrated by actress Bebe Neuwirth.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph about the film 'Ingredients' states that it is narrated by Bebe Neuwirth. This confirms that she is the person in question, so I now know where to focus my next steps.</step>
+<subanswer>
+Bebe Neuwirth</subanswer>
+
+>>> PRM Score: -1.8516, Format Score: 1.0000
+--------------------
+ Step 3:
+>>> Prompt (Partial): on, so I now know where to focus my next steps.</step>
+<subanswer>
+Bebe Neuwirth</subanswer>
+<step>
+
+>>> Completion: Now that I know Bebe Neuwirth narrated the film, I need to find out which TV show she first became known for. This will directly address the user's question.</step>
+<subquery>
+Which TV show did Bebe Neuwirth first become known for?</subquery>
+<retrieval>
+Title: Bebe Neuwirth
+Beatrice "Bebe" Neuwirth ( ; born December 31, 1958) is an American actress, singer and dancer.
+ On television, she is known for her portrayal of Dr. Lilith Sternin, Dr. Frasier Crane's wife (later former wife), on both the TV sitcom "Cheers" (in a starring role), and its spin-off "Frasier" (in a recurring guest role).
+ The role won her two Emmy Awards.
+ On stage, she is known for her Tony Award winning roles of Nickie in the revival of "Sweet Charity" (1986), and Velma Kelly in the revival of "Chicago" (1996).
+ Other Broadway musical roles include Morticia Addams in "The Addams Family" (2010).
+ Since 2014, she has starred as Nadine Tolliver in the CBS drama "Madam Secretary".
+</retrieval>
+
+>>> PRM Score: -0.5273, Format Score: 1.0000
+--------------------
+ Step 4:
+>>> Prompt (Partial): ce 2014, she has starred as Nadine Tolliver in the CBS drama "Madam Secretary".
+</retrieval>
+<step>
+
+>>> Completion: The paragraph about Bebe Neuwirth provides information about her television career. It mentions that she first became known for her role as Dr. Lilith Sternin on the sitcom 'Cheers.' This is the key detail I was looking for.</step>
+<subanswer>
+Cheers</subanswer>
+
+>>> PRM Score: 1.1094, Format Score: 1.0000
+--------------------
+ Step 5:
+>>> Prompt (Partial): om 'Cheers.' This is the key detail I was looking for.</step>
+<subanswer>
+Cheers</subanswer>
+<step>
+
+>>> Completion: I now know that Bebe Neuwirth narrated the film 'Ingredients' and that she first became known for her role on 'Cheers.' Combining these pieces of information, I can confidently conclude that the answer to the user's question is 'Cheers.'</step>
+<answer>
+Cheers</answer>
+
+>>> PRM Score: 1.7266, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': 0.0006, 'grad_norm': 0.30833685398101807, 'learning_rate': 9.95798319327731e-07, 'rollout/outcome_reward_mean': 2.9375, 'rollout/accuracy_mean': 0.96875, 'rollout/format_reward_mean': 1.0, 'rollout/prm_score_mean': -1.464278886903007, 'rollout/step_format_score_mean': 1.0, 'rollout/advantage_mean': -2.0582581900208258e-10, 'rollout/avg_steps': 4.96875, 'loss/policy_loss': 0.17821815556434079, 'logps/kl': -5.431594875189548e-05, 'logps/clip_ratio': 0.05296990026527761, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 5
+--------------------
+ Step 1:
+>>> Prompt (Partial): ho belongs to the Patiala Gharana lineage.
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+>>> Completion: The user is asking about an award given to a singer of the film Young Malang who belongs to the Patiala Gharana lineage. To begin, I need to identify which singer of the film belongs to the Patiala Gharana lineage. This will help me narrow down the scope of the question.</step>
+<subquery>
+Who is one of the singers of the film Young Malang who belongs to the Patiala Gharana lineage?</subquery>
+<retrieval>
+Title: Young Malang
+Young Malang is a 2013 Punjabi language Indian romantic comedy film written by Manshendra Kailey, directed by Rajdeep Singh, and produced by Rahulinder Singh Sidhu.
+ The film stars Yuvraj Hans, Neetu Singh, Vinaypal Buttar, Anita Kailey, Balli Riar and Anjana Sukhani, and debuted 20 September 2013.
+ Singers Mika, Javed Ali, Shafqat Amanat Ali and three actors in the movie, Yuvraj Hans, Balli Riar and Vinaypal Buttar, have sung the songs in the flick.
+ The film marks singer Balli Riar's debut in Punjabi films.
+</retrieval>
+
+>>> PRM Score: -2.1094, Format Score: 1.0000
+--------------------
+ Step 2:
+>>> Prompt (Partial): songs in the flick.
+ The film marks singer Balli Riar's debut in Punjabi films.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph provides information about the singers of the film Young Malang. Among them, I notice that Balli Riar is mentioned as having sung in the movie and is identified as a singer from the Patiala Gharana lineage. I will extract this as the answer to my first subquery.</step>
+<subanswer>
+Balli Riar</subanswer>
+
+>>> PRM Score: 0.6836, Format Score: 1.0000
+--------------------
+ Step 3:
+>>> Prompt (Partial): l extract this as the answer to my first subquery.</step>
+<subanswer>
+Balli Riar</subanswer>
+<step>
+
+>>> Completion: Now that I know Balli Riar is the singer in question, the next step is to identify an award given to him. This will directly address the user's question.</step>
+<subquery>
+What award was given to Balli Riar?</subquery>
+<retrieval>
+Title: Young Malang
+Young Malang is a 2013 Punjabi language Indian romantic comedy film written by Manshendra Kailey, directed by Rajdeep Singh, and produced by Rahulinder Singh Sidhu.
+ The film stars Yuvraj Hans, Neetu Singh, Vinaypal Buttar, Anita Kailey, Balli Riar and Anjana Sukhani, and debuted 20 September 2013.
+ Singers Mika, Javed Ali, Shafqat Amanat Ali and three actors in the movie, Yuvraj Hans, Balli Riar and Vinaypal Buttar, have sung the songs in the flick.
+ The film marks singer Balli Riar's debut in Punjabi films.
+</retrieval>
+
+>>> PRM Score: -2.7031, Format Score: 1.0000
+--------------------
+ Step 4:
+>>> Prompt (Partial): songs in the flick.
+ The film marks singer Balli Riar's debut in Punjabi films.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph mentions that the film Young Malang marks Balli Riar's debut in Punjabi films. This indicates that his debut in the film was a notable achievement, so I will extract this as the award he received.</step>
+<subanswer>
+Debut in Punjabi films</subanswer>
+
+>>> PRM Score: -1.0234, Format Score: 1.0000
+--------------------
+ Step 5:
+>>> Prompt (Partial): extract this as the award he received.</step>
+<subanswer>
+Debut in Punjabi films</subanswer>
+<step>
+
+>>> Completion: I now know that Balli Riar is the singer from the Patiala Gharana lineage in the film Young Malang and that the award he received was his debut in Punjabi films. Combining these findings, I conclude that the answer to the user's question is 'debut in Punjabi films.'</step>
+<answer>
+debut in Punjabi films</answer>
+
+>>> PRM Score: 0.2490, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================
+
+{'loss': -0.0066, 'grad_norm': 0.3879266083240509, 'learning_rate': 9.936974789915966e-07, 'rollout/outcome_reward_mean': 1.25, 'rollout/accuracy_mean': 0.140625, 'rollout/format_reward_mean': 0.96875, 'rollout/prm_score_mean': -1.1245621744791667, 'rollout/step_format_score_mean': 1.0, 'rollout/advantage_mean': 0.036158053431140966, 'rollout/avg_steps': 5.859375, 'loss/policy_loss': 0.13415579093509056, 'logps/kl': -5.8518741625013e-06, 'logps/clip_ratio': 0.02983435400391491, 'epoch': 0.01}
+
+==================================================
+ [DEBUG ROLLOUT SNAPSHOT]
+==================================================
+>>> Total Interaction Steps: 7
+--------------------
+ Step 1:
+>>> Prompt (Partial): ey from England to Africa to the Americas?
+<|im_end|>
+<|im_start|>assistant
+<think>
+</think>
+<step>
+
+>>> Completion: The user is asking about a group of people repelled from Hanover by Ferdinand. To begin, I need to determine who these people were, as that will clarify the subject of the question.</step>
+<subquery>
+Who were the people repelled from Hanover by Ferdinand?</subquery>
+<retrieval>
+Title: Northern Seven Years' War
+In April 1758, the British concluded the Anglo-Prussian Convention with Frederick in which they committed to pay him an annual subsidy of £670,000. Britain also dispatched 9,000 troops to reinforce Ferdinand's Hanoverian army, the first British troop commitment on the continent and a reversal in the policy of Pitt. Ferdinand had succeeded in driving the French from Hanover and Westphalia and re-captured the port of Emden in March 1758 before crossing the Rhine with his own forces, which caused alarm in France. Despite Ferdinand's victory over the French at the Battle of Krefeld and the brief occupation of Düsseldorf, he was compelled by the successful manoeuvering of larger French forces to withdraw across the Rhine.
+</retrieval>
+
+>>> PRM Score: -5.5312, Format Score: 1.0000
+--------------------
+ Step 2:
+>>> Prompt (Partial): e successful manoeuvering of larger French forces to withdraw across the Rhine.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph mentions that Ferdinand succeeded in driving the French from Hanover and Westphalia. From this, I can conclude that the people repelled from Hanover by Ferdinand were the French.</step>
+<subanswer>
+the French</subanswer>
+
+>>> PRM Score: -1.6719, Format Score: 1.0000
+--------------------
+ Step 3:
+>>> Prompt (Partial): epelled from Hanover by Ferdinand were the French.</step>
+<subanswer>
+the French</subanswer>
+<step>
+
+>>> Completion: Now that I know the French were repelled, I need to understand the geographical context of the question. Specifically, I need to identify the middle leg of the journey from England to Africa to the Americas to establish the region being referenced.</step>
+<subquery>
+What was the middle leg of the journey from England to Africa to the Americas?</subquery>
+<retrieval>
+Title: Triangular trade
+Historically the particular routes were also shaped by the powerful influence of winds and currents during the age of sail. For example, from the main trading nations of Western Europe it was much easier to sail westwards after first going south of 30 N latitude and reaching the so - called ``trade winds ''; thus arriving in the Caribbean rather than going straight west to the North American mainland. Returning from North America, it is easiest to follow the Gulf Stream in a northeasterly direction using the westerlies. A similar triangle to this, called the volta do mar was already being used by the Portuguese, before Christopher Columbus' voyage, to sail to the Canary Islands and the Azores. Columbus simply expanded the triangle outwards, and his route became the main way for Europeans to reach, and return from, the Americas.
+</retrieval>
+
+>>> PRM Score: -2.5000, Format Score: 1.0000
+--------------------
+ Step 4:
+>>> Prompt (Partial): oute became the main way for Europeans to reach, and return from, the Americas.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph explains that historically, the middle leg of the journey from Europe to Africa to the Americas was the Caribbean. This is the region being referred to in the question.</step>
+<subanswer>
+the Caribbean</subanswer>
+
+>>> PRM Score: -0.8555, Format Score: 1.0000
+--------------------
+ Step 5:
+>>> Prompt (Partial): s the region being referred to in the question.</step>
+<subanswer>
+the Caribbean</subanswer>
+<step>
+
+>>> Completion: Now that I know the middle leg of the journey is the Caribbean, I need to determine when the French first came to the Caribbean. This will help me connect the timeline of their arrival to the region mentioned in the question.</step>
+<subquery>
+When did the French come to the Caribbean?</subquery>
+<retrieval>
+Title: French West Indies
+Pierre Belain d'Esnambuc was a French trader and adventurer in the Caribbean, who established the first permanent French colony, Saint - Pierre, on the island of Martinique in 1635. Belain sailed to the Caribbean in 1625, hoping to establish a French settlement on the island of St. Christopher (St. Kitts). In 1626 he returned to France, where he won the support of Cardinal Richelieu to establish French colonies in the region. Richelieu became a shareholder in the Compagnie de Saint - Christophe, created to accomplish this with d'Esnambuc at its head. The company was not particularly successful and Richelieu had it reorganized as the Compagnie des Îles de l'Amérique. In 1635 d'Esnambuc sailed to Martinique with one hundred French settlers to clear land for sugarcane plantations.
+</retrieval>
+
+>>> PRM Score: -0.5938, Format Score: 1.0000
+--------------------
+ Step 6:
+>>> Prompt (Partial): nique with one hundred French settlers to clear land for sugarcane plantations.
+</retrieval>
+<step>
+
+>>> Completion: The paragraph states that Pierre Belain d'Esnambuc sailed to the Caribbean in 1625 to establish a French settlement. This indicates that the French came to the Caribbean in 1625.</step>
+<subanswer>
+1625</subanswer>
+
+>>> PRM Score: -0.4180, Format Score: 1.0000
+--------------------
+ Step 7:
+>>> Prompt (Partial): indicates that the French came to the Caribbean in 1625.</step>
+<subanswer>
+1625</subanswer>
+<step>
+
+>>> Completion: I now know that the French were repelled from Hanover, the middle leg of the journey is the Caribbean, and the French came to the Caribbean in 1625. Combining these pieces of information, the answer to the question is 1625.</step>
+<answer>
+1625</answer>
+
+>>> PRM Score: 0.6797, Format Score: 1.0000
+--------------------
+>>> Calculated Format Reward: 1.0
+==================================================
+  File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 133, in <module>
+    trainer.train()
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+    inputs = self._prepare_inputs(inputs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+    return func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+    generation_batch = self._generate_and_score_completions(generation_batch)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 395, in _generate_and_score_completions
+    with torch.no_grad():
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 378, in compute_logprobs_in_chunks
+    with torch.no_grad():
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 513, in _get_per_token_logps_and_entropies
+    mode = "train" if self.model.training else "eval"
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/peft_model.py", line 1923, in forward
+    return self.base_model(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/tuners/tuners_utils.py", line 308, in forward
+    return self.model.forward(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 918, in wrapper
+    output = func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 480, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 1072, in wrapper
+    outputs = func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 410, in forward
+    hidden_states = decoder_layer(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 260, in forward
+    hidden_states, _ = self.self_attn(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 216, in forward
+    attn_output, attn_weights = attention_interface(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/integrations/flash_attention.py", line 66, in flash_attention_forward
+    attn_output = _flash_attention_forward(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 607, in _flash_attention_forward
+    q, k, v, indices_q, (cu_seq_lens_q, cu_seq_lens_k), (max_length_q, max_length_k) = _upad_input(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 278, in _upad_input
+    indices_k, cu_seqlens_k, max_seqlen_in_batch_k = _get_unpad_data(attention_mask)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 225, in _get_unpad_data
+    indices = torch.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
+KeyboardInterrupt
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 133, in <module>
+[rank0]:     trainer.train()
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4014, in training_step
+[rank0]:     inputs = self._prepare_inputs(inputs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1279, in _prepare_inputs
+[rank0]:     generation_batch = self._generate_and_score_completions(generation_batch)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 395, in _generate_and_score_completions
+[rank0]:     with torch.no_grad():
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 378, in compute_logprobs_in_chunks
+[rank0]:     with torch.no_grad():
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer.py", line 513, in _get_per_token_logps_and_entropies
+[rank0]:     mode = "train" if self.model.training else "eval"
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/peft_model.py", line 1923, in forward
+[rank0]:     return self.base_model(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/peft/tuners/tuners_utils.py", line 308, in forward
+[rank0]:     return self.model.forward(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 918, in wrapper
+[rank0]:     output = func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 480, in forward
+[rank0]:     outputs: BaseModelOutputWithPast = self.model(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/generic.py", line 1072, in wrapper
+[rank0]:     outputs = func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 410, in forward
+[rank0]:     hidden_states = decoder_layer(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_layers.py", line 94, in __call__
+[rank0]:     return super().__call__(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 260, in forward
+[rank0]:     hidden_states, _ = self.self_attn(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 216, in forward
+[rank0]:     attn_output, attn_weights = attention_interface(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/integrations/flash_attention.py", line 66, in flash_attention_forward
+[rank0]:     attn_output = _flash_attention_forward(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 607, in _flash_attention_forward
+[rank0]:     q, k, v, indices_q, (cu_seq_lens_q, cu_seq_lens_k), (max_length_q, max_length_k) = _upad_input(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 278, in _upad_input
+[rank0]:     indices_k, cu_seqlens_k, max_seqlen_in_batch_k = _get_unpad_data(attention_mask)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/modeling_flash_attention_utils.py", line 225, in _get_unpad_data
+[rank0]:     indices = torch.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
+[rank0]: KeyboardInterrupt

@@ -3,6 +3,7 @@ from torch.nn import CrossEntropyLoss
 from transformers import Trainer
 import numpy as np
 from collections import defaultdict
+from torch.nn.utils.rnn import pad_sequence
 import re
 
 class CustomTrainer(Trainer):
@@ -17,22 +18,22 @@ class CustomTrainer(Trainer):
             "</subquery>": 3.0,
             "<subanswer>": 3.0, 
             "</subanswer>": 3.0,
-            "<step>": 2.0, 
+            "<step>": 1.0, 
             "</step>": 2.0,
-            "<retrieval>": 3.0, 
-            "</retrieval>": 3.0,
+            "<retrieval>": 1.0, 
+            "</retrieval>": 1.0,
         }
         vocab_size = len(self.processing_class)
-        weights = torch.full((vocab_size,), default_weight, device=self.model.device)
+        self.cost_weights = torch.full((vocab_size,), default_weight)
 
         self.special_token_map = {}
         for token_str, weight in self.token_weights.items():
             token_id = self.processing_class.convert_tokens_to_ids(token_str)
             if token_id != self.processing_class.unk_token_id:
-                weights[token_id] = weight
+                self.cost_weights[token_id] = weight
                 self.special_token_map[token_id] = token_str
         
-        self.loss_fct = CrossEntropyLoss(weight=weights, ignore_index=-100)
+        self.loss_fct = CrossEntropyLoss(weight=self.cost_weights, ignore_index=-100)
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         labels = inputs.pop("labels")
@@ -57,29 +58,34 @@ class CustomTrainer(Trainer):
         model = self.model
         model.eval()
 
-        preds_texts, prompt_texts, losses = [], [], []
+        print(f"\n[Starting Evaluation] Special Token Check...")
+        
+        MAX_DEBUG_BATCH = 20
+        count = 0
+        preds_texts, losses = [], []
         for batch in dataloader:
+            if count >= MAX_DEBUG_BATCH:
+                break
+            count += 1
+
             batch = self._prepare_inputs(batch)
             labels = batch["labels"]
             outputs = model(**batch)
             logits = outputs.get("logits")
-
+            
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
-            loss = self.loss_fct(
-                shift_logits.view(-1, self.model.config.vocab_size),
-                shift_labels.view(-1)
-            )
+            
+            loss = self.loss_fct(shift_logits.view(-1, self.model.config.vocab_size), shift_labels.view(-1))
             losses.append(loss.item())
 
             input_ids = batch["input_ids"]
+            
+            prompt_texts = []
             decoded_inputs = self.processing_class.batch_decode(input_ids, skip_special_tokens=False)
             for text in decoded_inputs:
-                match = re.search(r"(<\|im_start\|>assistant\n<think>\n</think>\n)", text)
-                if match:
-                    prompt = text[:match.end()]
-                else:
-                    prompt = text
+                prompt_len = text.rfind("<step>\n")
+                prompt = text[:prompt_len + len("<step>\n")]
                 prompt_texts.append(prompt)
 
             gen_inputs = self.processing_class(
@@ -97,64 +103,30 @@ class CustomTrainer(Trainer):
                 temperature=0.7,
                 top_p=0.9,
                 eos_token_id=self.processing_class.eos_token_id,
-                pad_token_id=self.processing_class.eos_token_id
+                pad_token_id=self.processing_class.pad_token_id
             )
 
             gen_texts = self.processing_class.batch_decode(gen_outputs, skip_special_tokens=False)
-            preds_texts.extend(gen_texts)
-
+            pure_generations = [text[len(prompt):] for prompt, text in zip(prompt_texts, gen_texts)]
+            preds_texts.extend(pure_generations)
+        
         avg_loss = np.mean(losses)
         metrics = {f"{metric_key_prefix}_loss": avg_loss}
 
-        def check_format_correctness(text: str) -> bool:
-            tag_pattern = re.compile(r"</?\s*(step|subquery|retrieval|subanswer|answer)\s*>", flags=re.IGNORECASE)
-            tags_matches = list(tag_pattern.finditer(text))
-            if not tags_matches:
-                return False
+        def format_check(completion):
+            tags = re.findall(r"</?[a-zA-Z]+>", completion)
 
-            tag_seq = []
-            for m in tags_matches:
-                raw = m.group(0)
-                name = m.group(1).lower()
-                is_closing = raw.strip().startswith("</")
-                tag_seq.append((is_closing, name))
+            if tags[:3] == ["</step>", "<subquery>", "</subquery>"]:
+                return True
+            if tags[:3] == ["</step>", "<subanswer>", "</subanswer>"]:
+                return True
+            if tags[:3] == ["</step>", "<answer>", "</answer>"]:
+                return True
 
-            stack = []
-            for is_closing, name in tag_seq:
-                if not is_closing:
-                    stack.append(name)
-                else:
-                    if not stack:
-                        return False
-                    top = stack.pop()
-                    if top != name:
-                        return False
-            if stack:
-                return False
-
-            opening_tags = [name for is_closing, name in tag_seq if not is_closing]
-            if not opening_tags:
-                return False
-
-            i = 0
-            n = len(opening_tags)
-            while i < n:
-                if opening_tags[i] != "step":
-                    return False
-                i += 1
-
-                if i < n and opening_tags[i] == "answer":
-                    return i == n - 1
-                expected_seq = ["subquery", "retrieval", "step", "subanswer"]
-                for expected in expected_seq:
-                    if i >= n or opening_tags[i] != expected:
-                        return False
-                    i += 1
-
-            return True
+            return False
 
         total = len(preds_texts)
-        correct = sum(1 for text in preds_texts if check_format_correctness(text))
+        correct = sum(1 for text in preds_texts if format_check(text))
         format_acc = correct / total if total > 0 else 0.0
 
         metrics[f"{metric_key_prefix}_format_acc"] = format_acc

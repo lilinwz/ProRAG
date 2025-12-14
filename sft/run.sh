@@ -1,6 +1,6 @@
 MODEL_NAME="Qwen/Qwen3-8B"
 
-NUM_TRAIN_EPOCHS=5
+NUM_TRAIN_EPOCHS=1
 LEARNING_RATE=2e-5
 
 PER_DEVICE_TRAIN_BATCH_SIZE=4
@@ -10,7 +10,7 @@ SAVE_STEPS=100
 EVAL_STEPS=50
 LOGGING_STEPS=10
 
-TRAIN_DATA_PATH="/home/aiscuser/ds/zhaowang/rag/data/train_sft.jsonl"
+TRAIN_DATA_PATH="/home/aiscuser/ds/zhaowang/rag/data/train_sft_new.jsonl"
 OUTPUT_DIR="/home/aiscuser/ds/zhaowang/rag/save/sft"
 
 accelerate launch train.py \

@@ -20,22 +20,6 @@ TAG_MAP = {
 CYCLE_PATTERN = ["S", "Q", "R", "S", "A"]
 END_PATTERN = ["S", "F"]
 
-class StopOnKeywords(StoppingCriteria):
-    def __init__(self, tokenizer, stop_tokens: List[str], lookback_tokens: int=3):
-        self.tokenizer = tokenizer
-        self.stop_tokens = stop_tokens
-        self.lookback_tokens = lookback_tokens
-
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        if input_ids.shape[-1] == 0:
-            return False
-        last_ids = input_ids[0, -self.lookback_tokens:].tolist()
-        decoded = self.tokenizer.decode(last_ids, skip_special_tokens=False, clean_up_tokenization_spaces=True)
-        for tok in self.stop_tokens:
-            if decoded.endswith(tok):
-                return True
-        return False
-
 class E5VectorRetriever:
     def __init__(self, paragraphs: Dict[str, List], model: SentenceTransformer, device="cuda"):
         self.model = model
@@ -60,7 +44,7 @@ class E5VectorRetriever:
         self.corpus_embeddings = emb
         self._encoded = True
 
-    def retrieve(self, query: str, top_k: int = 3) -> List[str]:
+    def retrieve(self, query: str, top_k: int = 1) -> List[str]:
         if not self.corpus or not query: return []
         if not self._encoded: self._encode_corpus()
         if self.corpus_embeddings is None: return []
@@ -89,18 +73,10 @@ class RAGEnv:
 
     def update(self, new_text: str, prm_score: float, format_score: float):
         retrieval_text = ""
-        sq_match = re.search(r"<subquery>(.*?)</subquery>", new_text, re.DOTALL)
-
-        if sq_match:
-            query = sq_match.group(1).strip()
-            docs = self.retriever.retrieve(query, top_k=1)
-            if docs:
-                retrieval_text = f"\n<retrieval>\n{docs[0]}\n</retrieval>"
-
-        if "<answer>" in new_text or "<|im_end|>" in new_text:
+        if "<answer>" in new_text:
             self.is_done = True
         else:
-            retrieval_text += "\n<step>\n"
+            retrieval_text += "<step>\n"
     
         self.trajectory.append({
             "prompt": self.current_prompt,
@@ -114,7 +90,7 @@ class RAGEnv:
 def format_reward_step(completion):
     tags = re.findall(r"</?[a-zA-Z]+>", completion)
 
-    if tags == ["</step>", "<subquery>", "</subquery>"]:
+    if tags == ["</step>", "<subquery>", "</subquery>", "<retrieval>", "</retrieval>"]:
         return 1.0
 
     if tags == ["</step>", "<subanswer>", "</subanswer>"]:
@@ -208,9 +184,7 @@ class RAGTrainer(GRPOTrainer):
         active_indices = list(range(len(active_envs)))
         
         stop_words = ["</subquery>", "</subanswer>", "<|im_end|>", "</answer>"]
-        stopping_criteria = StoppingCriteriaList([
-            StopOnKeywords(self.processing_class, stop_words)
-        ])
+        stop_ids = [self.processing_class.convert_tokens_to_ids(tok) for tok in stop_words]
 
         gen_config = GenerationConfig(
             max_new_tokens=512,
@@ -218,7 +192,7 @@ class RAGTrainer(GRPOTrainer):
             do_sample=True,
             top_p=0.9,
             pad_token_id=self.processing_class.pad_token_id,
-            eos_token_id=self.processing_class.eos_token_id,
+            eos_token_id=stop_ids,
         )
 
         # --- 1. Rollout Phase ---
@@ -233,13 +207,30 @@ class RAGTrainer(GRPOTrainer):
             with torch.no_grad():
                 outputs = model_unwrapped.generate(
                     **enc,
-                    generation_config=gen_config,
-                    stopping_criteria=stopping_criteria
+                    generation_config=gen_config
                 )
             
             input_len = enc.input_ids.shape[1]
             new_ids = outputs[:, input_len:]
-            new_texts = self.processing_class.batch_decode(new_ids, skip_special_tokens=False)
+            raw_texts = self.processing_class.batch_decode(new_ids, skip_special_tokens=False)
+
+            new_texts = []
+            for i, text in zip(active_indices, raw_texts):
+                retriever = active_envs[i].retriever
+                text = text.replace(self.processing_class.eos_token, "")
+                text = text.replace(self.processing_class.pad_token, "")
+                
+                sq_match = re.search(r"<subquery>(.*?)</subquery>", text, re.DOTALL)
+                if sq_match:
+                    query = sq_match.group(1).strip()
+                    docs = retriever.retrieve(query, top_k=1)
+                    if docs:
+                        retrieval_text = f"\n<retrieval>\n{docs[0]}\n</retrieval>\n"
+                else:
+                    retrieval_text = "\n"
+                
+                new_text = text + retrieval_text
+                new_texts.append(new_text)
             
             del enc, outputs, new_ids
             torch.cuda.empty_cache()
@@ -276,21 +267,21 @@ class RAGTrainer(GRPOTrainer):
             print("\n" + "="*50)
             print(" [DEBUG ROLLOUT SNAPSHOT] ")
             print("="*50)
-        
-            debug_env = active_envs[0] 
+
+            debug_env = active_envs[0]            
             debug_text = debug_env.history_text
             debug_traj = debug_env.trajectory
-
+            debug_fmt = format_reward(debug_text)
+ 
             print(f">>> Total Interaction Steps: {len(debug_traj)}")
             print("-" * 20)
             for idx, step in enumerate(debug_traj):
                 print(f" Step {idx+1}:")
-                print(f"  >>> Prompt (Partial): {step['prompt'][-100:]}")
-                print(f"  >>> Completion: {step['completion']}")
-                print(f"  >>> PRM Score: {step['prm_score']:.4f}, Format Score: {step['format_score']:.4f}")
+                print(f">>> Prompt (Partial): {step['prompt'][-100:]}")
+                print(f">>> Completion: {step['completion']}")
+                print(f">>> PRM Score: {step['prm_score']:.4f}, Format Score: {step['format_score']:.4f}")
                 print("-" * 20)
 
-            debug_fmt = format_reward(debug_text)
             print(f">>> Calculated Format Reward: {debug_fmt}")
             print("="*50 + "\n")
         

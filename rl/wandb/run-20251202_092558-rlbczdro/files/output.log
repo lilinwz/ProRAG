@@ -2,3 +2,101 @@ wandb: Detected [huggingface_hub.inference] in use.
 wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
 wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
   0%|          | 0/362 [00:00<?, ?it/s]`generation_config` default values have been modified to match model-specific defaults: {'top_k': 20}. If this is not desired, please set these values explicitly.
+ 11%|█         | 40/362 [2:08:30<16:42:38, 186.83s/it]/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user.
+{'loss': -0.5788236458669417, 'grad_norm': 0.0, 'learning_rate': 9.751381215469613e-07, 'rollout/outcome_reward_mean': 0.653125, 'rollout/accuracy_mean': 0.253125, 'rollout/format_reward_mean': 0.146875, 'rollout/prm_score_mean': -2.2958111797781156, 'rollout/advantage_mean': 2.9475359777000887e-05, 'rollout/avg_steps': 6.4625, 'epoch': 0.03}
+{'loss': -0.7614421734830102, 'grad_norm': 0.0, 'learning_rate': 9.47513812154696e-07, 'rollout/outcome_reward_mean': 0.596875, 'rollout/accuracy_mean': 0.228125, 'rollout/format_reward_mean': 0.140625, 'rollout/prm_score_mean': -2.7139054755633185, 'rollout/advantage_mean': -0.009918872302594956, 'rollout/avg_steps': 7.18125, 'epoch': 0.06}
+{'loss': -0.280486298823962, 'grad_norm': 0.0, 'learning_rate': 9.19889502762431e-07, 'rollout/outcome_reward_mean': 0.41875, 'rollout/accuracy_mean': 0.184375, 'rollout/format_reward_mean': 0.05, 'rollout/prm_score_mean': -2.8023824775657107, 'rollout/advantage_mean': -0.0019418400880596865, 'rollout/avg_steps': 7.346875, 'epoch': 0.08}
+{'loss': -0.5849166564890765, 'grad_norm': 0.0, 'learning_rate': 8.922651933701657e-07, 'rollout/outcome_reward_mean': 0.496875, 'rollout/accuracy_mean': 0.215625, 'rollout/format_reward_mean': 0.065625, 'rollout/prm_score_mean': -2.7809757087335862, 'rollout/advantage_mean': -0.009115516830625418, 'rollout/avg_steps': 7.190625, 'epoch': 0.11}
+  warnings.warn(  # warn only once
+ 15%|█▍        | 54/362 [2:54:01<16:05:39, 188.12s/it]A decoder-only architecture is being used, but right-padding was detected! For correct generation results, please set `padding_side='left'` when initializing the tokenizer.
+{'loss': -0.6332746551219316, 'grad_norm': 0.0, 'learning_rate': 8.646408839779005e-07, 'rollout/outcome_reward_mean': 0.425, 'rollout/accuracy_mean': 0.190625, 'rollout/format_reward_mean': 0.04375, 'rollout/prm_score_mean': -2.640396195885624, 'rollout/advantage_mean': -0.0016319718435730622, 'rollout/avg_steps': 7.225, 'epoch': 0.14}
+A decoder-only architecture is being used, but right-padding was detected! For correct generation results, please set `padding_side='left'` when initializing the tokenizer.
+A decoder-only architecture is being used, but right-padding was detected! For correct generation results, please set `padding_side='left'` when initializing the tokenizer.
+A decoder-only architecture is being used, but right-padding was detected! For correct generation results, please set `padding_side='left'` when initializing the tokenizer.
+ 22%|██▏       | 80/362 [4:19:38<15:32:47, 198.47s/it]Traceback (most recent call last):
+{'loss': -0.38150830286904236, 'grad_norm': 0.0, 'learning_rate': 8.370165745856354e-07, 'rollout/outcome_reward_mean': 0.496875, 'rollout/accuracy_mean': 0.209375, 'rollout/format_reward_mean': 0.078125, 'rollout/prm_score_mean': -2.83351422609157, 'rollout/advantage_mean': 0.004972756460970508, 'rollout/avg_steps': 6.6875, 'epoch': 0.17}
+{'loss': -0.5311751590110362, 'grad_norm': 0.0, 'learning_rate': 8.093922651933701e-07, 'rollout/outcome_reward_mean': 0.521875, 'rollout/accuracy_mean': 0.234375, 'rollout/format_reward_mean': 0.053125, 'rollout/prm_score_mean': -2.638050021961999, 'rollout/advantage_mean': -0.0035405884894924556, 'rollout/avg_steps': 6.9625, 'epoch': 0.19}
+{'loss': -0.7656686664966401, 'grad_norm': 0.0, 'learning_rate': 7.817679558011049e-07, 'rollout/outcome_reward_mean': 0.434375, 'rollout/accuracy_mean': 0.184375, 'rollout/format_reward_mean': 0.065625, 'rollout/prm_score_mean': -2.725127808992232, 'rollout/advantage_mean': -0.014446242127940361, 'rollout/avg_steps': 7.1625, 'epoch': 0.22}
+  File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+    trainer.train()
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+    return inner_training_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2756, in _inner_training_loop
+    self._maybe_log_save_evaluate(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 3221, in _maybe_log_save_evaluate
+    metrics = self._evaluate(trial, ignore_keys_for_eval)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 3170, in _evaluate
+    metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4489, in evaluate
+    output = eval_loop(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4685, in evaluation_loop
+    losses, logits, labels = self.prediction_step(model, inputs, prediction_loss_only, ignore_keys=ignore_keys)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1938, in prediction_step
+    loss = self.compute_loss(model, inputs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+    return func(self, *args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1816, in compute_loss
+    return self._compute_loss(model, inputs)
+  File "/home/aiscuser/ds/zhaowang/rag/rl/trainer_tmp.py", line 423, in _compute_loss
+    self.accelerator.backward(chunk_loss)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/accelerate/accelerator.py", line 2844, in backward
+    self.deepspeed_engine_wrapped.backward(loss, sync_gradients=self.sync_gradients, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/accelerate/utils/deepspeed.py", line 270, in backward
+    self.engine.backward(loss, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/deepspeed/utils/nvtx.py", line 18, in wrapped_fn
+    ret_val = func(*args, **kwargs)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/deepspeed/runtime/engine.py", line 2020, in backward
+    self.optimizer.backward(loss, retain_graph=retain_graph)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/deepspeed/runtime/zero/stage_1_and_2.py", line 2064, in backward
+    self.loss_scaler.backward(loss.float(), retain_graph=retain_graph)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/deepspeed/runtime/fp16/loss_scaler.py", line 63, in backward
+    scaled_loss.backward(retain_graph=retain_graph)
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/_tensor.py", line 648, in backward
+    torch.autograd.backward(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/autograd/__init__.py", line 353, in backward
+    _engine_run_backward(
+  File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/autograd/graph.py", line 824, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/train.py", line 131, in <module>
+[rank0]:     trainer.train()
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 2756, in _inner_training_loop
+[rank0]:     self._maybe_log_save_evaluate(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 3221, in _maybe_log_save_evaluate
+[rank0]:     metrics = self._evaluate(trial, ignore_keys_for_eval)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 3170, in _evaluate
+[rank0]:     metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4489, in evaluate
+[rank0]:     output = eval_loop(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/transformers/trainer.py", line 4685, in evaluation_loop
+[rank0]:     losses, logits, labels = self.prediction_step(model, inputs, prediction_loss_only, ignore_keys=ignore_keys)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1938, in prediction_step
+[rank0]:     loss = self.compute_loss(model, inputs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/extras/profiling.py", line 98, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py", line 1816, in compute_loss
+[rank0]:     return self._compute_loss(model, inputs)
+[rank0]:   File "/home/aiscuser/ds/zhaowang/rag/rl/trainer_tmp.py", line 423, in _compute_loss
+[rank0]:     self.accelerator.backward(chunk_loss)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/accelerate/accelerator.py", line 2844, in backward
+[rank0]:     self.deepspeed_engine_wrapped.backward(loss, sync_gradients=self.sync_gradients, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/accelerate/utils/deepspeed.py", line 270, in backward
+[rank0]:     self.engine.backward(loss, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/deepspeed/utils/nvtx.py", line 18, in wrapped_fn
+[rank0]:     ret_val = func(*args, **kwargs)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/deepspeed/runtime/engine.py", line 2020, in backward
+[rank0]:     self.optimizer.backward(loss, retain_graph=retain_graph)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/deepspeed/runtime/zero/stage_1_and_2.py", line 2064, in backward
+[rank0]:     self.loss_scaler.backward(loss.float(), retain_graph=retain_graph)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/deepspeed/runtime/fp16/loss_scaler.py", line 63, in backward
+[rank0]:     scaled_loss.backward(retain_graph=retain_graph)
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/_tensor.py", line 648, in backward
+[rank0]:     torch.autograd.backward(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/autograd/__init__.py", line 353, in backward
+[rank0]:     _engine_run_backward(
+[rank0]:   File "/opt/conda/envs/ptca/lib/python3.10/site-packages/torch/autograd/graph.py", line 824, in _engine_run_backward
+[rank0]:     return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[rank0]: RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn

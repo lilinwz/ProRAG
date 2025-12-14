@@ -1,0 +1,6 @@
+{"time":"2025-12-06T09:49:49.341294941Z","level":"INFO","msg":"stream: starting","core version":"0.23.1"}
+{"time":"2025-12-06T09:49:49.72804412Z","level":"INFO","msg":"stream: created new stream","id":"kgk8vdiv"}
+{"time":"2025-12-06T09:49:49.72840378Z","level":"INFO","msg":"handler: started","stream_id":"kgk8vdiv"}
+{"time":"2025-12-06T09:49:49.961129964Z","level":"INFO","msg":"stream: started","id":"kgk8vdiv"}
+{"time":"2025-12-06T09:49:49.961193568Z","level":"INFO","msg":"writer: started","stream_id":"kgk8vdiv"}
+{"time":"2025-12-06T09:49:49.961220623Z","level":"INFO","msg":"sender: started","stream_id":"kgk8vdiv"}
