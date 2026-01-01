@@ -7,18 +7,20 @@ import torch
 import random
 import numpy as np
 import collections
+import requests
 from tqdm import tqdm
 from typing import List, Dict, Any
-from sentence_transformers import SentenceTransformer
 from vllm import LLM, SamplingParams
 
-MODEL_PATH = "/home/v-zhaowan/local_models/rag_sft"
+MODEL_PATH = "/home/v-zhaowan/ds/zhaowang/rag/save/sft"
 # TEST_DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_dev.jsonl"
-TEST_DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/train_rl_tmp.jsonl"
-OUTPUT_RESULTS_FILE = "/home/aiscuser/ds/zhaowang/rag/test/results/ours_rl.jsonl"
-E5_MODEL_NAME = 'intfloat/e5-large-v2'
+# TEST_DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/2wiki/test.jsonl"
+TEST_DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/bamboogle/test.jsonl"
+# TEST_DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/HotpotQA/test.jsonl"
+OUTPUT_RESULTS_FILE = "/home/v-zhaowan/ds/zhaowang/rag/test/results/ours_sft_bamboo.jsonl"
+RETRIEVAL_SERVER_URL = "http://localhost:8000/retrieve"
 
-MAX_TOKENS = 1024
+MAX_TOKENS = 4096
 MAX_HOP = 13
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -34,58 +36,44 @@ Now, use this structure to answer the following user question:
 User Question: {question}
 """
 
-class E5VectorRetriever:
-    def __init__(self, paragraphs: Dict[str, List], model: SentenceTransformer, device="cuda"):
-        self.model = model
-        self.device = device
-        self.titles = [item["title"] for item in paragraphs]
-        self.passages = [item["paragraph_text"] for item in paragraphs]
-        self.corpus = [f"Title: {t}\n{p}" for t, p in zip(self.titles, self.passages)]
-        self.corpus_embeddings = None
-        self._encoded = False
+class RemoteRetriever:
+    def __init__(self, url: str, topk: int = 3):
+        self.search_url = url
+        self.topk = topk
 
-    def _encode_corpus(self):
-        if not self.corpus: return
-        with torch.no_grad():
-            emb = self.model.encode(
-                self.corpus, 
-                convert_to_tensor=True, 
-                device=self.device,
-                show_progress_bar=False,
-                batch_size=32,
-                normalize_embeddings=True
-            )
-        self.corpus_embeddings = emb
-        self._encoded = True
+    def batch_search(self, queries: List[str]) -> List[str]:
+        results = self._batch_search(queries)['result']
+        return [self._passages2string(result) for result in results]
 
-    def retrieve(self, query: str, top_k: int = 1) -> List[str]:
-        if not self.corpus or not query: return []
-        if not self._encoded: self._encode_corpus()
-        if self.corpus_embeddings is None: return []
-        
-        with torch.no_grad():
-            q_emb = self.model.encode(
-                f"query: {query}", 
-                convert_to_tensor=True, 
-                device=self.device, 
-                show_progress_bar=False,
-                normalize_embeddings=True
-            )
-            scores = torch.matmul(self.corpus_embeddings, q_emb)
-            top_indices = torch.topk(scores, min(top_k, len(scores))).indices.cpu().tolist()
-        
-        return [f"Title: {self.titles[idx]}\n{self.passages[idx]}" for idx in top_indices]
+    def _batch_search(self, queries):
+        payload = {
+            "queries": queries,
+            "topk": self.topk,
+            "return_scores": True 
+        }
+        return requests.post(self.search_url, json=payload).json()
+
+    def _passages2string(self, retrieval_result):
+        format_reference = ''
+        for idx, doc_item in enumerate(retrieval_result):
+            
+            content = doc_item['document']['contents']
+            title = content.split("\n")[0]
+            text = "\n".join(content.split("\n")[1:])
+            format_reference += f"Doc {idx+1}(Title: {title}) {text}\n"
+
+        return format_reference
 
 class RequestState:
-    def __init__(self, sample, retrieval_model: E5VectorRetriever):
+    def __init__(self, sample, retriever: RemoteRetriever):
         self.id = sample.get("id", str(random.randint(0, 100000)))
         self.sample = sample
-        self.question = sample["question"]
+        self.question = sample["question"] if "question" in sample else sample["Question"]
         self.prompt = f"<|im_start|>user\n{INSTRUCTION_TEMPLATE.format(question=self.question)}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n<step>\n"
         self.full_trace = "<step>\n"
         self.finished = False
         self.final_answer = ""
-        self.retriever = E5VectorRetriever(sample.get("paragraphs", []), retrieval_model)
+        self.retriever = retriever
 
 def calculate_f1_score(prediction: str, ground_truth_list: list) -> float:
     prediction_tokens = prediction.lower().split()
@@ -106,8 +94,14 @@ def calculate_f1_score(prediction: str, ground_truth_list: list) -> float:
     return best_f1
 
 def main():
-    print(f"Loading Retriever Model: {E5_MODEL_NAME} on {DEVICE}...")
-    retrieval_model = SentenceTransformer(E5_MODEL_NAME, device=DEVICE)
+    print(f"Connecting to Retrieval Server at: {RETRIEVAL_SERVER_URL}")
+    try:
+        requests.get(RETRIEVAL_SERVER_URL.replace("/retrieve", "/docs"), timeout=5)
+        print("Server connection successful.")
+    except Exception as e:
+        print(f"Warning: Could not connect to server ({e}). Ensure it is running.")
+
+    retriever = RemoteRetriever(RETRIEVAL_SERVER_URL)
 
     print(f"Loading vLLM Model: {MODEL_PATH}")
     llm = LLM(
@@ -132,7 +126,7 @@ def main():
         test_samples = [json.loads(line) for line in f]
     print(f"Total samples: {len(test_samples)}")
 
-    all_states = [RequestState(s, retrieval_model) for s in test_samples]
+    all_states = [RequestState(s, retriever) for s in test_samples]
     print("Starting Multi-hop RAG Inference with vLLM...")
 
     for hop in range(MAX_HOP):
@@ -144,7 +138,8 @@ def main():
         prompts = [s.prompt for s in active_states]
 
         outputs = llm.generate(prompts, sampling_params, use_tqdm=True)
-
+        queries_to_search = []
+        indices_to_search = []
         for i, output in tqdm(list(enumerate(outputs)), total=len(outputs)):
             state = active_states[i]
             generated_text = output.outputs[0].text
@@ -162,17 +157,25 @@ def main():
                 sq_match = re.search(r"<subquery>(.*?)</subquery>", generated_text, re.DOTALL)
                 if sq_match:
                     q_str = sq_match.group(1).strip()
-                    docs = state.retriever.retrieve(q_str, top_k=1)
-                    
-                    retrieval_block = f"\n<retrieval>\n{docs}\n</retrieval>\n<step>\n"
-                    state.prompt += retrieval_block
-                    state.full_trace += retrieval_block
+                    queries_to_search.append(q_str)
+                    indices_to_search.append(i)
                 else:
                     state.prompt += "\n<retrieval>Error in query parsing</retrieval>\n<step>\n"
 
             else:
                 state.prompt += "\n<step>\n"
                 state.full_trace += "\n<step>\n"
+        
+        if queries_to_search:
+            print(f"Batch retrieving {len(queries_to_search)} queries...")
+            batch_results = retriever.batch_search(queries_to_search)
+            
+            for idx, doc_str in zip(indices_to_search, batch_results):
+                state = active_states[idx]
+                if not doc_str.strip(): doc_str = "No relevant documents found."        
+                retrieval_block = f"\n<retrieval>\n{doc_str}\n</retrieval>\n<step>\n"
+                state.prompt += retrieval_block
+                state.full_trace += retrieval_block
 
     results, all_f1, all_em = [], [], []
     print("Evaluating results...")
@@ -180,7 +183,8 @@ def main():
         if not state.final_answer:
             state.final_answer = "Max hops reached"
         
-        gt_list = [state.sample["answer"]] + state.sample.get("answer_aliases", [])
+        answer = state.sample["answer"] if "answer" in state.sample else state.sample["Answer"]
+        gt_list = [answer] + state.sample.get("answer_aliases", [])
         
         em = 1.0 if any(state.final_answer.lower() == g.lower() for g in gt_list) else 0.0
         f1 = calculate_f1_score(state.final_answer, gt_list)

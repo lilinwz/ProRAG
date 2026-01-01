@@ -11,7 +11,7 @@ from sentence_transformers import SentenceTransformer
 from vllm import LLM, SamplingParams
 
 # ================= config =================
-os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
+os.environ["CUDA_VISIBLE_DEVICES"] = "3" 
 
 MULSIQUE_PATH = "/home/aiscuser/ds/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_train.jsonl"
 HOTPOTQA_PATH = "/home/aiscuser/ds/zhaowang/rag/data/HotpotQA/train.jsonl"
@@ -22,10 +22,10 @@ E5_MODEL_NAME = 'intfloat/e5-large-v2'
 
 MAX_TOKENS = 1024
 MAX_HOP = 9
+NUM_GENERATIONS = 4
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-STEP1_SEED_NUM_PER_DATASET = 500
-STEP2_BATCH_SIZE = 500        
+BATCH_SIZE = 200        
 TARGET_TOTAL_SIZE = 2000        
 
 INSTRUCTION_TEMPLATE = """You are an assistant tasked with answering user questions by following a step-by-step reasoning process. Structure your entire response using the following special tokens and rules:
@@ -83,7 +83,7 @@ class E5VectorRetriever:
         return [f"Title: {self.titles[idx]}\n{self.passages[idx]}" for idx in top_indices]
 
 class RequestState:
-    def __init__(self, sample: Dict, retrieval_model: SentenceTransformer):
+    def __init__(self, sample: Dict, retriever: E5VectorRetriever):
         self.id = sample.get("id", str(random.randint(0, 100000)))
         self.sample = sample
         self.question = sample["question"]
@@ -92,7 +92,7 @@ class RequestState:
         self.full_trace = "<step>\n"
         self.finished = False
         self.final_answer = ""
-        self.retriever = E5VectorRetriever(sample.get("paragraphs", []), retrieval_model, device=DEVICE)
+        self.retriever = retriever
 
 def format_output_item(sample):
     user_content = INSTRUCTION_TEMPLATE.format(question=sample["question"])
@@ -101,7 +101,7 @@ def format_output_item(sample):
         "question": sample["question"],
         "answer": sample["answer"],
         "paragraphs": sample["paragraphs"],
-        "init_prompt": init_prompt
+        "prompt": init_prompt
     }
 
 def load_all_data():
@@ -141,10 +141,15 @@ def load_all_data():
 def run_inference_batch(samples, llm, retrieval_model):
     if not samples: return []
     
-    states = [RequestState(s, retrieval_model) for s in samples]
+    states = []
+    for sample in samples:
+        shared_retriever = E5VectorRetriever(sample.get("paragraphs", []), retrieval_model, device=DEVICE)
+        for _ in range(NUM_GENERATIONS):
+            states.append(RequestState(sample, shared_retriever))
+
     sampling_params = SamplingParams(
-        temperature=0.7,
-        top_p=0.9,
+        temperature=1.0,
+        top_p=1.0,
         max_tokens=MAX_TOKENS,
         stop=["</subquery>", "</subanswer>", "</answer>", "<|im_end|>"],
         include_stop_str_in_output=True,
@@ -186,14 +191,23 @@ def run_inference_batch(samples, llm, retrieval_model):
             else:
                 state.prompt += "\n<step>\n"
 
-    incorrect_samples = []
+    id_to_results = collections.defaultdict(list)
+    id_to_sample = {}
+
     for state in states:
         answer = state.sample["answer"]
-        is_correct = (state.final_answer.lower() == answer.lower())
-        if not is_correct:
-            incorrect_samples.append(format_output_item(state.sample))
+        is_correct = (state.final_answer.lower().strip() == answer.lower().strip())
+        id_to_results[state.id].append(is_correct)
+        id_to_sample[state.id] = state.sample
+
+    mixed_samples = [] 
+    for sid, results in id_to_results.items():
+        if (True in results) and (False in results):
+            mixed_samples.append(format_output_item(id_to_sample[sid]))
             
-    return incorrect_samples
+    print(f"  Total groups processed: {len(samples)}")
+    print(f"  Groups with mixed results (consistent inconsistency): {len(mixed_samples)}")            
+    return mixed_samples
 
 def main():
     musique_pool, hotpot_pool = load_all_data()
@@ -203,63 +217,67 @@ def main():
 
     final_train_data = []
     print("\n=== Step 1: Selecting 500 random samples from each dataset (Base) ===")
-    base_mul = musique_pool[:STEP1_SEED_NUM_PER_DATASET]
-    musique_pool = musique_pool[STEP1_SEED_NUM_PER_DATASET:]
+    # base_mul = musique_pool[:STEP1_SEED_NUM_PER_DATASET]
+    # musique_pool = musique_pool[STEP1_SEED_NUM_PER_DATASET:]
     
-    base_hot = hotpot_pool[:STEP1_SEED_NUM_PER_DATASET]
-    hotpot_pool = hotpot_pool[STEP1_SEED_NUM_PER_DATASET:]
+    # base_hot = hotpot_pool[:STEP1_SEED_NUM_PER_DATASET]
+    # hotpot_pool = hotpot_pool[STEP1_SEED_NUM_PER_DATASET:]
     
-    for item in base_mul + base_hot:
-        final_train_data.append(format_output_item(item))
+    # for item in base_mul + base_hot:
+    #     final_train_data.append(format_output_item(item))
         
-    print(f"Added {len(base_mul)} MulSiQue and {len(base_hot)} HotpotQA samples.")
-    print(f"Current Training Data Size: {len(final_train_data)}")
+    # print(f"Added {len(base_mul)} MulSiQue and {len(base_hot)} HotpotQA samples.")
+    # print(f"Current Training Data Size: {len(final_train_data)}")
 
-    print("\n=== Step 2: Mining Hard Negatives (Loop until > 2000 total) ===")
-    print(f"Loading Retriever: {E5_MODEL_NAME}...")
-    retrieval_model = SentenceTransformer(E5_MODEL_NAME, device=DEVICE)
+    # print("\n=== Step 2: Mining Hard Negatives (Loop until > 2000 total) ===")
+    # print(f"Loading Retriever: {E5_MODEL_NAME}...")
+    # retrieval_model = SentenceTransformer(E5_MODEL_NAME, device=DEVICE)
     
-    print(f"Loading LLM: {MODEL_PATH}...")
-    llm = LLM(
-        model=MODEL_PATH,  
-        gpu_memory_utilization=0.85,
-        tensor_parallel_size=1,
-        enable_prefix_caching=True,
-        trust_remote_code=True
-    )
+    # print(f"Loading LLM: {MODEL_PATH}...")
+    # llm = LLM(
+    #     model=MODEL_PATH,  
+    #     gpu_memory_utilization=0.85,
+    #     tensor_parallel_size=1,
+    #     enable_prefix_caching=True,
+    #     trust_remote_code=True
+    # )
     
     combined_pool = musique_pool + hotpot_pool
     random.shuffle(combined_pool)
     
-    iteration = 0
-    while len(final_train_data) < TARGET_TOTAL_SIZE:
-        iteration += 1
-        needed = TARGET_TOTAL_SIZE - len(final_train_data)
-        print(f"\n--- Iteration {iteration} | Current Size: {len(final_train_data)} | Needed: >0 ---")
+    # iteration = 0
+    # while len(final_train_data) < TARGET_TOTAL_SIZE:
+    #     iteration += 1
+    #     needed = TARGET_TOTAL_SIZE - len(final_train_data)
+    #     print(f"\n--- Iteration {iteration} | Current Size: {len(final_train_data)} | Needed: >0 ---")
         
-        if len(combined_pool) == 0:
-            print("Warning: Run out of source data!")
-            break
+    #     if len(combined_pool) == 0:
+    #         print("Warning: Run out of source data!")
+    #         break
             
-        current_batch_size = min(STEP2_BATCH_SIZE, len(combined_pool))
-        batch_samples = combined_pool[:current_batch_size]
-        combined_pool = combined_pool[current_batch_size:]
+    #     current_batch_size = min(BATCH_SIZE, len(combined_pool))
+    #     batch_samples = combined_pool[:current_batch_size]
+    #     combined_pool = combined_pool[current_batch_size:]
         
-        print(f"Inferencing on batch of {len(batch_samples)} samples...")
-        incorrect_items = run_inference_batch(batch_samples, llm, retrieval_model)
+    #     print(f"Inferencing on batch of {len(batch_samples)} samples...")
+    #     incorrect_items = run_inference_batch(batch_samples, llm, retrieval_model)
         
-        print(f"Found {len(incorrect_items)} incorrect samples in this batch.")
-        final_train_data.extend(incorrect_items)
+    #     print(f"Found {len(incorrect_items)} incorrect samples in this batch.")
+    #     final_train_data.extend(incorrect_items)
         
-        print(f"Saving checkpoint to {OUTPUT_PATH}...")
-        with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-            for item in final_train_data:
-                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+    #     print(f"Saving checkpoint to {OUTPUT_PATH}...")
+    #     with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
+    #         for item in final_train_data:
+    #             f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
-    print("\n==========================================")
-    print(f"Done! Final Dataset Size: {len(final_train_data)}")
-    print(f"Saved to: {OUTPUT_PATH}")
-    print("==========================================")
+    # print("\n==========================================")
+    # print(f"Done! Final Dataset Size: {len(final_train_data)}")
+    # print(f"Saved to: {OUTPUT_PATH}")
+    # print("==========================================")
+    final_train_data = combined_pool[:5000]
+    with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
+        for item in final_train_data:
+            f.write(json.dumps(format_output_item(item), ensure_ascii=False) + "\n")
 
 if __name__ == "__main__":
     main()

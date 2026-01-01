@@ -1,5 +1,5 @@
 data/
 save/
 test/results
-rm/wandb
-ppo/wandb
+rl/wandb
+sft/wandb

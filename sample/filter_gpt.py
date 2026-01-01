@@ -13,8 +13,8 @@ from azure.identity import (
 from openai import AzureOpenAI
 
 # ================= 配置部分 =================
-INPUT_FILE = "/home/v-zhaowan/ds/zhaowang/rag/data/raw/tree_new.jsonl"
-OUTPUT_FILE = "/home/v-zhaowan/ds/zhaowang/rag/data/train_prm.jsonl"
+INPUT_FILE = "/home/aiscuser/ds/zhaowang/rag/data/raw/tree_new_wiki.jsonl"
+OUTPUT_FILE = "/home/aiscuser/ds/zhaowang/rag/data/train_prm_wiki.jsonl"
 MAX_WORKERS = 50 
 
 # ================= PROMPT =================

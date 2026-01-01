@@ -16,14 +16,14 @@ from torch.nn.utils.rnn import pad_sequence
 from typing import List
 from peft import LoraConfig, PeftModel
 from trl import GRPOConfig
-from trainer import RAGTrainer
+from b import RAGTrainer
 from vllm import SamplingParams
 
 # --- 配置路径 ---
 DATA_PATH = "/home/aiscuser/ds/zhaowang/rag/data/train_rl_tmp.jsonl"
 MODEL_PATH = "/home/aiscuser/ds/zhaowang/rag/save/sft"
-PRM_PATH = "/home/aiscuser/ds/zhaowang/rag/save/prm_wiki"
-OUTPUT_DIR = "/home/aiscuser/ds/zhaowang/rag/save/rl"
+# PRM_PATH = "/home/aiscuser/ds/zhaowang/rag/save/prm_wiki"
+OUTPUT_DIR = "/home/aiscuser/ds/zhaowang/rag/save/grpo"
 RETRIEVAL_URL = "http://localhost:8000/retrieve"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -37,7 +37,7 @@ LEARNING_RATE = 1e-5
 NUM_GENERATIONS = 8
 MAX_COMPLETION_LENGTH = 4096
 MAX_INTERACTION_STEPS = 11
-PRM_BETA = 0.5
+PRM_BETA = 0.0
 
 TAG_MAP = {
     "<step>":      ("</step>",      "S"),
@@ -352,28 +352,18 @@ if __name__ == "__main__":
         attn_implementation="flash_attention_2"
     )
 
-    print("Loading PRM Model & Tokenizer...")
-    prm_tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True, padding_side='left')
-    if prm_tokenizer.pad_token is None:
-        prm_tokenizer.pad_token = prm_tokenizer.eos_token
-
-    # prm_base_model = AutoModelForSequenceClassification.from_pretrained(
-    #     MODEL_PATH,
+    # print("Loading PRM Model & Tokenizer...")
+    # prm_tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True, padding_side='left')
+    # if prm_tokenizer.pad_token is None:
+    #     prm_tokenizer.pad_token = prm_tokenizer.eos_token
+    
+    # prm_model = AutoModelForSequenceClassification.from_pretrained(
+    #     PRM_PATH, 
     #     num_labels=1,
     #     dtype=torch.bfloat16,
     #     trust_remote_code=True
     # )
-    # prm_base_model.config.pad_token_id = prm_tokenizer.pad_token_id
-    # prm_model = PeftModel.from_pretrained(prm_base_model, PRM_PATH)
-    # prm_model = prm_model.merge_and_unload()
-    
-    prm_model = AutoModelForSequenceClassification.from_pretrained(
-        PRM_PATH, 
-        num_labels=1,
-        dtype=torch.bfloat16,
-        trust_remote_code=True
-    )
-    prm_model.eval()
+    # prm_model.eval()
 
     retriever = RemoteRetriever(RETRIEVAL_URL)
 
@@ -409,8 +399,7 @@ if __name__ == "__main__":
         log_completions=True,
         remove_unused_columns=False,
         use_vllm=True,
-        vllm_mode="colocate",
-        # vllm_importance_sampling_correction=False
+        vllm_mode="colocate"
     )
 
     print("Initializing Trainer...")
@@ -421,16 +410,16 @@ if __name__ == "__main__":
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         processing_class=tokenizer,
-        reward_processing_classes=[prm_tokenizer],
+        # reward_processing_classes=[prm_tokenizer],
         peft_config=lora_config,
         rollout_func=rag_rollout_with_prm,
-        reward_model=prm_model, 
+        # reward_model=prm_model, 
         prm_beta=PRM_BETA,
         retriever=retriever
     )
 
     print("Start Training...")
-    trainer.train(resume_from_checkpoint="/home/aiscuser/ds/zhaowang/rag/save/rl/checkpoint-900")
+    trainer.train()
 
     print("Training finished. Saving...")
     trainer.save_model(OUTPUT_DIR)
