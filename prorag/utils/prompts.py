@@ -152,3 +152,4 @@ Your task is to review the "History" and a list of "Candidate Next Steps" (gener
     "reason": "<brief explanation>"
 }
 """
+    return prompt

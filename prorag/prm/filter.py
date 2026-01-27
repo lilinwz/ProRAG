@@ -111,10 +111,11 @@ async def main(args):
         use_azure_identity=True
     )
 
+    system_prompt = build_filter_system_prompt()
     await engine.run_batch(
         items=all_jobs,
         prompt_builder=build_prompt,
-        system_prompt=build_filter_system_prompt(),
+        system_prompt=system_prompt,
         output_file=args.output_file,
         extract_json=True,
         result_parser=parse_result

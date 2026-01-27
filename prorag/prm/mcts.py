@@ -27,23 +27,23 @@ class Node:
     def is_fully_expanded(self):
         return len(self.children) > 0
         
-    def select_best_child(self, args.c_puct=args.c_puct):
+    def select_best_child(self, c_puct):
         best_score = -float('inf')
         best_child = None
         for child in self.children:
-            score = (child.Q / (child.N + 1e-8)) + args.c_puct * child.prior * (math.sqrt(self.N) / (1 + child.N))
+            score = (child.Q / (child.N + 1e-8)) + c_puct * child.prior * (math.sqrt(self.N) / (1 + child.N))
             if score > best_score:
                 best_score = score
                 best_child = child
         return best_child
 
-    def backpropagate(self, init_reward):
+    def backpropagate(self, init_reward, gamma):
         node = self
         reward = init_reward
         while node is not None:
             node.N += 1
             node.Q += reward
-            reward = reward * args.gamma
+            reward = reward * gamma
             node = node.parent
 
     def to_dict(self):
@@ -57,25 +57,32 @@ class Node:
         }
 
 class AsyncMCTS:
-    def __init__(self, client: AsyncOpenAI, retriever: AsyncRemoteRetriever, initial_prompt, question, final_answer):
+    def __init__(self, client: AsyncOpenAI, retriever: AsyncRemoteRetriever, initial_prompt, question, final_answer, args):
         self.client = client
         self.retriever = retriever
         self.root = Node(state=initial_prompt, depth=0)
         self.question = question
         self.final_answer = final_answer
         self.stop_tokens = ["</subquery>", "</subanswer>", "</answer>", "<|im_end|>"]
+        self.num_simulations = args.num_simulations
+        self.gamma = args.gamma
+        self.c_puct = args.c_puct
+        self.expansion_width = args.expansion_width
+        self.max_depth = args.max_depth
+        self.server = args.server
+        self.max_completion_length = args.max_completion_length
 
     async def _async_retrieve(self, query):
         results = await self.retriever.batch_search([query])
         return results[0] if results else ""
 
-    async def run(self, args.num_simulations=args.num_simulations):
-        for _ in range(args.num_simulations):
+    async def run(self):
+        for _ in range(self.num_simulations):
             leaf_node = self._select(self.root)
             
-            if self._is_terminal(leaf_node.action) or leaf_node.depth >= args.max_depth:
+            if self._is_terminal(leaf_node.action) or leaf_node.depth >= self.max_depth:
                 reward = self._compute_terminal_reward(leaf_node.action)
-                leaf_node.backpropagate(reward)
+                leaf_node.backpropagate(reward, self.gamma)
                 continue
 
             child_nodes = await self._expand(leaf_node)
@@ -83,22 +90,22 @@ class AsyncMCTS:
             if child_nodes:
                 node_to_simulate = np.random.choice(child_nodes)
                 reward = await self._simulate(node_to_simulate)
-                node_to_simulate.backpropagate(reward)
+                node_to_simulate.backpropagate(reward, self.gamma)
 
     def _select(self, node):
-        while node.is_fully_expanded() and not self._is_terminal(node.state) and node.depth < args.max_depth:
-            node = node.select_best_child()
+        while node.is_fully_expanded() and not self._is_terminal(node.state) and node.depth < self.max_depth:
+            node = node.select_best_child(self.c_puct)
         return node
 
     async def _expand(self, node):
         try:
             response = await self.client.completions.create(
-                model=args.server,
+                model=self.server,
                 prompt=node.state,
-                n=args.expansion_width,
+                n=self.expansion_width,
                 temperature=0.9,
                 top_p=0.95,
-                max_tokens=args.max_completion_length,
+                max_tokens=self.max_completion_length,
                 stop=self.stop_tokens,
                 extra_body={
                     "include_stop_str_in_output": True, 
@@ -153,10 +160,10 @@ class AsyncMCTS:
         current_action = node.action
         depth = node.depth
         
-        while not self._is_terminal(current_action) and depth < args.max_depth:
+        while not self._is_terminal(current_action) and depth < self.max_depth:
             try:
                 response = await self.client.completions.create(
-                    model=args.server,
+                    model=self.server,
                     prompt=current_state,
                     n=1,
                     temperature=0.0,
@@ -204,7 +211,7 @@ class AsyncMCTS:
     def get_search_tree(self) -> dict:
         return self.root.to_dict()
 
-async def process_single_item(sem, client_pool, retriever, item, file_lock, output_file):
+async def process_single_item(sem, client_pool, retriever, item, file_lock, args):
     client = client_pool[np.random.randint(0, len(client_pool))]
     
     async with sem:
@@ -215,7 +222,7 @@ async def process_single_item(sem, client_pool, retriever, item, file_lock, outp
             user_content = build_user_prompt(question)
             init_prompt = f"<|im_start|>user\n{user_content}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n<step>\n" 
             
-            mcts = AsyncMCTS(client, retriever, init_prompt, question, answer)
+            mcts = AsyncMCTS(client, retriever, init_prompt, question, answer, args)
             await mcts.run()
             
             result = {
@@ -226,7 +233,7 @@ async def process_single_item(sem, client_pool, retriever, item, file_lock, outp
             }
 
             async with file_lock:
-                with open(output_file, 'a', encoding='utf-8') as f:
+                with open(args.output_path, 'a', encoding='utf-8') as f:
                     f.write(json.dumps(result, ensure_ascii=False) + "\n")
             
             return result
@@ -246,29 +253,28 @@ async def main(args):
                 if not line:
                     continue
                 item = json.loads(line)
+                data.append(item)
    
     random.shuffle(data)
     processed_ids = set()
     if os.path.exists(args.output_path):
         with open(args.output_path, 'r', encoding='utf-8') as f:
             for line in f:
-                try:
-                    processed_ids.add(json.loads(line)['id'])
-                except: pass
+                processed_ids.add(json.loads(line)['id'])
     
     data_to_process = [x for x in data if x['id'] not in processed_ids]
     data_to_process = data_to_process[:1000]
     print(f"Total: {len(data)}, Processed: {len(processed_ids)}, Remaining: {len(data_to_process)}")
 
-    clients = [AsyncOpenAI(base_url=url, args.api_key=args.api_key) for url in args.api_urls]
-    sem = asyncio.Semaphore(args.concurrecy)
+    clients = [AsyncOpenAI(base_url=url, api_key=args.api_key) for url in args.api_urls]
+    sem = asyncio.Semaphore(args.concurrency)
     file_lock = asyncio.Lock()
     
     tasks = []
     for item in data_to_process:
-        tasks.append(process_single_item(sem, clients, retriever, item, file_lock, args.output_path))
+        tasks.append(process_single_item(sem, clients, retriever, item, file_lock, args))
     
-    print(f"Starting execution with {args.concurrecy} concurrent tasks...")
+    print(f"Starting execution with {args.concurrency} concurrent tasks...")
     pbar = tqdm(asyncio.as_completed(tasks), total=len(tasks))
     for coro in pbar:
         await coro
@@ -281,10 +287,10 @@ if __name__ == "__main__":
     parser.add_argument("--output_path", type=str, required=True, help="Path to save the output jsonl")
 
     parser.add_argument("--api_urls", nargs="+", default=[
-        "http://localhost:8000/v1",
         "http://localhost:8001/v1",
         "http://localhost:8002/v1",
-        "http://localhost:8003/v1"
+        "http://localhost:8003/v1",
+        "http://localhost:8004/v1"
     ], help="List of API endpoints")
     parser.add_argument("--api_key", type=str, default="EMPTY", help="API Key")
 

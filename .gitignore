@@ -3,3 +3,7 @@
 /prorag.egg-info/
 __pycache__/
 train.log
+server_0.log
+server_1.log
+server_2.log
+server_3.log
