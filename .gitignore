@@ -1,6 +1,7 @@
 /data/
 /saves/
 /prorag.egg-info/
+wandb/
 __pycache__/
 train.log
 server_0.log
