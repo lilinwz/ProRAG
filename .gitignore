@@ -1,5 +1,2 @@
 data/
-save/
-test/results
-rl/wandb
-sft/wandb
+saves/
