@@ -19,7 +19,6 @@ def main(args)
     def format_prompt(example):
         question = example["question"]
         answer = example["answer"]
-        
         return {
             "prompt": build_user_prompt(q_text)
             "answer": answer
