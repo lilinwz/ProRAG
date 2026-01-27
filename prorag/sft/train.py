@@ -90,7 +90,6 @@ def main(args):
     print(f"label:{labels}")
     print("="*60 + "\n")
 
-    # --- Trainer Config ---
     print("Setting up Trainer...")
     training_args = TrainingArguments(
         output_dir=args.output_dir,
@@ -121,22 +120,19 @@ def main(args):
         args=training_args,
         train_dataset=processed_train_dataset,
         eval_dataset=processed_eval_dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         data_collator=data_collator
     )
 
-    # --- train ---
     print("Starting training...")
     trainer.train()
 
-    # --- save ---
     save_path = args.output_dir
     print(f"Saving Model to {save_path}...")
     trainer.save_model(save_path)
     tokenizer.save_pretrained(save_path)
 
     print("Training complete! Model saved.")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fine-tune the SFT model.")

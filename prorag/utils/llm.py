@@ -118,16 +118,16 @@ class AsyncLLMEngine:
 
                 if extract_json:
                     try:
-                        parsed = json.loads(response_text)
+                        parsed_response = json.loads(response_text)
                     except json.JSONDecodeError:
                         start = response_text.find("{")
                         end = response_text.rfind("}") + 1
-                        parsed = json.loads(response_text[start:end])
+                        parsed_response = json.loads(response_text[start:end])
                     
                 if result_parser:
                     return result_parser(item, parsed_response)
                 else:
-                    item["response_data"] = parsed_response
+                    item["response_data"].update(parsed_response)
                     return item
             except Exception as e:
                 print(f"❌ Error processing {uid}: {e}")

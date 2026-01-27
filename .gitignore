@@ -1,3 +1,5 @@
-data/
-saves/
-prorag.egg-info/
+/data/
+/saves/
+/prorag.egg-info/
+__pycache__/
+train.log/
