@@ -15,6 +15,7 @@ def build_full_prompt(question, history):
 
 def load_data(file_path, tokenizer):
     print(f"Loading file: {file_path} ...")
+    all_data = []
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
             if not line.strip(): 
