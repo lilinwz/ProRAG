@@ -18,7 +18,7 @@ pip install vllm==0.11.0
 pip install -e .
 
 # 4. Install training dependencies (TRL, PEFT, WandB, DeepSpeed)
-pip install deepspeed==0.18.4 trl==0.27.0 peft==0.18.1 wandb==0.24.0 
+pip install deepspeed==0.18.4 trl==0.26.0 peft==0.18.1 wandb==0.24.0 
 
 # 5. Install Flash Attention 2
 pip install flash-attn==2.8.3 --no-build-isolation
