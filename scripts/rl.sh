@@ -6,8 +6,8 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 accelerate launch \
     --config_file configs/ds.yaml \
     prorag/rl/train.py \
-    --model_path /home/aiscuser/ds/zhaowang/rag/save/rft \
-    --prm_path /home/aiscuser/ds/zhaowang/rag/save/prm_wiki \
+    --model_path saves/rft \
+    --prm_path saves/prm_wiki \
     --train_data_path data/train_rl.jsonl \
     --output_dir saves/rl \
     --num_train_epochs 1 \
@@ -24,7 +24,7 @@ accelerate launch \
     --prm_beta 0.3 \
     2>&1 | tee train.log
 
-# python -m prorag.rl.merge \
-#     --model_path saves/rft \
-#     --lora_path saves/rl \
-#     --output_path saves/model
+python -m prorag.rl.merge \
+    --model_path saves/rft \
+    --lora_path saves/rl \
+    --output_path saves/model

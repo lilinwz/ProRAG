@@ -20,8 +20,12 @@ def main(args):
     def format_prompt(example):
         question = example["question"]
         answer = example["answer"]
+
+        user_content = build_user_prompt(question)
+        prompt = f"<|im_start|>user\n{user_content}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n<step>\n"      
+
         return {
-            "prompt": build_user_prompt(question),
+            "prompt": prompt,
             "answer": answer
         }
 
@@ -80,7 +84,7 @@ def main(args):
         bf16=args.bf16,
         fp16=args.fp16,
         gradient_checkpointing=True, 
-        gradient_checkpointing_kwargs={'use_reentrant': False}, 
+        gradient_checkpointing_kwargs={'use_reentrant': True}, 
         ddp_find_unused_parameters=False, 
         report_to="wandb",
         run_name="prorag",
