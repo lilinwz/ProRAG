@@ -1,6 +1,7 @@
 import re
 import torch
 from vllm import SamplingParams
+from reward import format_reward_step
 
 MAX_INTERACTION_STEPS = 11
 

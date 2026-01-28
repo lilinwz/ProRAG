@@ -11,22 +11,23 @@ from prorag.utils.prompts import build_user_prompt
 from prorag.utils.retriever import RemoteRetriever
 from reward import outcome_reward
 from rollout import rag_rollout_with_prm
+import argparse
 
-def main(args)
-    print(f"Loading data from {args.data_path} ...")
-    full_dataset = load_dataset("json", data_files=data_path, split="train")
+def main(args):
+    print(f"Loading data from {args.train_data_path} ...")
+    full_dataset = load_dataset("json", data_files=args.train_data_path, split="train")
 
     def format_prompt(example):
         question = example["question"]
         answer = example["answer"]
         return {
-            "prompt": build_user_prompt(q_text)
+            "prompt": build_user_prompt(question),
             "answer": answer
         }
 
     full_dataset = full_dataset.map(format_prompt)
     full_dataset = full_dataset.shuffle(seed=42) 
-    dataset_dict = full_dataset.train_test_split(test_size=test_size, seed=42)
+    dataset_dict = full_dataset.train_test_split(test_size=args.test_size, seed=42)
     train_dataset, eval_dataset = dataset_dict['train'], dataset_dict['test']
 
     print("Loading Policy Model & Tokenizer...")
@@ -116,13 +117,14 @@ def main(args)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train RAG Policy with GRPO and PRM")
 
-    parser.add_argument("--data_path", type=str, required=True, help="Path to the training data jsonl file")
+    parser.add_argument("--train_data_path", type=str, required=True, help="Path to the training data jsonl file")
     parser.add_argument("--model_path", type=str, required=True, help="Path to the SFT (Policy) model")
     parser.add_argument("--prm_path", type=str, required=True, help="Path to the PRM model")
     parser.add_argument("--output_dir", type=str, required=True, help="Directory to save the RL model")
 
     parser.add_argument("--num_train_epochs", type=int, default=1, help="Number of training epochs")
     parser.add_argument("--learning_rate", type=float, default=1e-5, help="Learning rate")
+    parser.add_argument("--test_size", type=int, default=100, help="Eval data size")
     
     parser.add_argument("--per_device_train_batch_size", type=int, default=1, help="Train batch size per device")
     parser.add_argument("--per_device_eval_batch_size", type=int, default=8, help="Eval batch size per device")
