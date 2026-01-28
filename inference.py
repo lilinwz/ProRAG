@@ -11,6 +11,8 @@ import requests
 from tqdm import tqdm
 from typing import List, Dict, Any
 from vllm import LLM, SamplingParams
+from prorag.utils.prompts import build_user_prompt
+from prorag.utils.retriever import RemoteRetriever
 
 MODEL_PATH = "/home/v-zhaowan/ds/zhaowang/rag/save/sft"
 # TEST_DATA_PATH = "/home/v-zhaowan/ds/zhaowang/rag/data/MulSiQue/musique_ans_v1.0_dev.jsonl"
@@ -24,84 +26,21 @@ MAX_TOKENS = 4096
 MAX_HOP = 13
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-INSTRUCTION_TEMPLATE = """You are an assistant tasked with answering user questions by following a step-by-step reasoning process. Structure your entire response using the following special tokens and rules:
-- `<step>...</step>`: Use this to explain the logical reasoning for each step in your process. Each step should bring you closer to solving the user's query.
-- `<subquery>...</subquery>`: This block contains a specific question or sub-question that needs to be answered in order to progress. This is part of your reasoning, so make sure the subquery is clear and answerable.
-- `<retrieval>...</retrieval>`: This block contains information retrieved from external sources (such as a search engine) that help answer the subquery. It can contain factual data or direct quotes.
-- `<subanswer>...</subanswer>`: This block contains the answer to the preceding subquery. It's the most direct, concise answer that results from the retrieval.
-- `<answer>...</answer>`: This is the final, conclusive answer to the user's main question, derived by combining the steps and subanswers.
-
-Now, use this structure to answer the following user question:
-
-User Question: {question}
-"""
-
-class RemoteRetriever:
-    def __init__(self, url: str, topk: int = 3):
-        self.search_url = url
-        self.topk = topk
-
-    def batch_search(self, queries: List[str]) -> List[str]:
-        results = self._batch_search(queries)['result']
-        return [self._passages2string(result) for result in results]
-
-    def _batch_search(self, queries):
-        payload = {
-            "queries": queries,
-            "topk": self.topk,
-            "return_scores": True 
-        }
-        return requests.post(self.search_url, json=payload).json()
-
-    def _passages2string(self, retrieval_result):
-        format_reference = ''
-        for idx, doc_item in enumerate(retrieval_result):
-            
-            content = doc_item['document']['contents']
-            title = content.split("\n")[0]
-            text = "\n".join(content.split("\n")[1:])
-            format_reference += f"Doc {idx+1}(Title: {title}) {text}\n"
-
-        return format_reference
-
 class RequestState:
     def __init__(self, sample, retriever: RemoteRetriever):
         self.id = sample.get("id", str(random.randint(0, 100000)))
         self.sample = sample
         self.question = sample["question"] if "question" in sample else sample["Question"]
-        self.prompt = f"<|im_start|>user\n{INSTRUCTION_TEMPLATE.format(question=self.question)}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n<step>\n"
+        self.prompt = f"<|im_start|>user\n{build_user_prompt(self.question)}<|im_end|>\n<|im_start|>assistant\n<think>\n</think>\n<step>\n"
         self.full_trace = "<step>\n"
+        self.step_history = []
         self.finished = False
         self.final_answer = ""
         self.retriever = retriever
 
-def calculate_f1_score(prediction: str, ground_truth_list: list) -> float:
-    prediction_tokens = prediction.lower().split()
-    best_f1 = 0.0
-    for gt in ground_truth_list:
-        gt_tokens = gt.lower().split()
-        if not prediction_tokens or not gt_tokens:
-            continue
-        common = collections.Counter(prediction_tokens) & collections.Counter(gt_tokens)
-        num_same = sum(common.values())
-        if num_same == 0:
-            continue
-        prec = num_same / len(prediction_tokens)
-        rec = num_same / len(gt_tokens)
-        f1 = 2 * prec * rec / (prec + rec)
-        if f1 > best_f1:
-            best_f1 = f1
-    return best_f1
-
 def main():
-    print(f"Connecting to Retrieval Server at: {RETRIEVAL_SERVER_URL}")
-    try:
-        requests.get(RETRIEVAL_SERVER_URL.replace("/retrieve", "/docs"), timeout=5)
-        print("Server connection successful.")
-    except Exception as e:
-        print(f"Warning: Could not connect to server ({e}). Ensure it is running.")
-
-    retriever = RemoteRetriever(RETRIEVAL_SERVER_URL)
+    print(f"Connecting to Retrieval Server")
+    retriever = RemoteRetriever()
 
     print(f"Loading vLLM Model: {MODEL_PATH}")
     llm = LLM(
@@ -201,21 +140,6 @@ def main():
             "f1": f1,
             "trace": state.full_trace,
         })
-
-    avg_em = np.mean(all_em) if all_em else 0
-    avg_f1 = np.mean(all_f1) if all_f1 else 0
-    
-    print(f"\n==========================================")
-    print(f"Final Results (vLLM Accelerated)")
-    print(f"Samples: {len(test_samples)}")
-    print(f"EM Score: {avg_em:.4f}")
-    print(f"F1 Score: {avg_f1:.4f}")
-    print(f"==========================================")
-
-    print(f"Saving to {OUTPUT_RESULTS_FILE}...")
-    with open(OUTPUT_RESULTS_FILE, 'w', encoding='utf-8') as f:
-        for r in results:
-            f.write(json.dumps(r) + '\n')
 
 if __name__ == "__main__":
     main()
