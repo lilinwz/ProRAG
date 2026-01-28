@@ -3,10 +3,10 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python -m accelerate.commands.launch \
     --config_file config/ds.yaml \
     train.py \
-    --model_path "saves/rft" \
-    --prm_path "saves/prm" \
-    --train_data_path "data/train_rl.jsonl" \
-    --output_dir "saves/rl" \
+    --model_path saves/rft \
+    --prm_path saves/prm \
+    --train_data_path data/train_rl.jsonl \
+    --output_dir saves/rl \
     --num_train_epochs 1 \
     --learning_rate 1e-5 \
     --per_device_train_batch_size 1 \
@@ -22,6 +22,6 @@ python -m accelerate.commands.launch \
     2>&1 | tee train.log
 
 python -m prorag.rl.merge.py \
-    --model_path "save/rft" \
-    --lora_path "saves/rl" \
-    --output_path "saves/model"
+    --model_path save/rft \
+    --lora_path saves/rl \
+    --output_path saves/model
