@@ -5,12 +5,12 @@ import torch
 import random
 import numpy as np
 import collections
-import requests
 from tqdm import tqdm
 from typing import List, Dict, Any
 from vllm import LLM, SamplingParams
 from prorag.utils.prompts import build_user_prompt
 from prorag.utils.retriever import RemoteRetriever
+import argparse
 
 class RequestState:
     def __init__(self, sample, retriever: RemoteRetriever):
@@ -24,7 +24,7 @@ class RequestState:
         self.final_answer = ""
         self.retriever = retriever
 
-def main():
+def main(args):
     print(f"Connecting to Retrieval Server")
     retriever = RemoteRetriever()
 
@@ -65,8 +65,8 @@ def main():
     print(f"Total samples loaded from {len(file_paths)} files: {len(test_samples)}")
     
     random.shuffle(test_samples)            
-    holdout_data = test_samples[:SAMPLE_SIZE]
-    test_samples = test_samples[SAMPLE_SIZE:]
+    holdout_data = test_samples[:args.sample_size]
+    test_samples = test_samples[args.sample_size:]
 
     print(f"Saving {len(holdout_data)} items to {args.holdout_path} ...")
     os.makedirs(os.path.dirname(args.holdout_path), exist_ok=True)
@@ -144,7 +144,7 @@ def main():
                 state.final_answer = "Max hops reached"
             
             answer = state.sample["answer"] if "answer" in state.sample else state.sample["Answer"]            
-            em = 1.0 if any(state.final_answer.lower() == answer.lower()) else 0.0            
+            em = 1.0 if state.final_answer.lower() == answer.lower() else 0.0            
             global_em.append(em)
             
             if em == 1.0:
@@ -178,13 +178,13 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, required=True, help="Path to the vLLM compatible model checkpoint")
     parser.add_argument("--data_path", type=str, required=True, help="Path to the input JSONL data file")
     parser.add_argument("--output_path", type=str, required=True, help="Path to save the collected positive samples (EM=1)")
-    parser.add_argument("--holdout_path", type=str, default="data/raw/train_rl.jsonl", help="Path to save the rl training data")
+    parser.add_argument("--holdout_path", type=str, default="data/train_rl.jsonl", help="Path to save the rl training data")
 
     parser.add_argument("--batch_size", type=int, default=1024, help="Inference batch size")
+    parser.add_argument("--sample_size", type=int, default=10000, help="Training data size for RL")
     parser.add_argument("--max_seq_length", type=int, default=4096, help="Maximum sequence length (tokens)")
     parser.add_argument("--max_iter", type=int, default=13, help="Maximum reasoning hops (iterations)")
     parser.add_argument("--temperature", type=float, default=0.8, help="Sampling temperature")
 
     args = parser.parse_args()
-
     main(args)

@@ -59,9 +59,9 @@ def main(args):
             effective_prompt_length = min(prompt_len, len(labels))
             labels[:effective_prompt_length] = [-100] * effective_prompt_length
             
-            input_ids_list.append(torch.tensor(input_ids))
-            attn_masks.append(torch.tensor(attention_mask))
-            label_list.append(torch.tensor(labels))
+            input_ids_list.append(input_ids)
+            attn_masks.append(attention_mask)
+            label_list.append(labels)
 
         return {
             "input_ids": input_ids_list,

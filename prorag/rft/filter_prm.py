@@ -21,9 +21,9 @@ def main(args):
     )
     model.eval()
 
-    print(f"Reading raw data from: {args.input_path} ...")
+    print(f"Reading raw data from: {args.data_path} ...")
     data_lines = []
-    with open(args.input_path, 'r', encoding='utf-8') as f:
+    with open(args.data_path, 'r', encoding='utf-8') as f:
         data_lines = [json.loads(line) for line in f if line.strip()]
 
     total_lines = len(data_lines)
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PRM Filtering Script")
 
     parser.add_argument("--model_path", type=str, required=True, help="Path to the PRM model checkpoint")
-    parser.add_argument("--input_path", type=str, required=True, help="Path to the input JSONL file")
+    parser.add_argument("--data_path", type=str, required=True, help="Path to the input JSONL file")
     parser.add_argument("--output_path", type=str, required=True, help="Path to save the filtered output JSONL")
 
     parser.add_argument("--batch_size", type=int, default=16, help="Inference batch size (default: 16)")

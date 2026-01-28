@@ -11,6 +11,7 @@ from datasets import load_dataset
 from deepspeed.runtime.zero.config import ZeroStageEnum
 from deepspeed.runtime.fp16.loss_scaler import LossScaler 
 from deepspeed.utils.tensor_fragment import fragment_address
+import argparse
 import wandb
 
 if hasattr(torch.serialization, 'add_safe_globals'):
@@ -20,7 +21,7 @@ if hasattr(torch.serialization, 'add_safe_globals'):
 
 MAX_LENGTH = 4096
 
-def main():
+def main(args):
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_name, 
         trust_remote_code=True
@@ -36,31 +37,35 @@ def main():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    def create_sft_prompt(sample):
-        prompt_text = sample["input"]
-        response_text = sample["output"]
+    def preprocess_function(examples):
+        input_ids_list, attn_masks, label_list = [], [], []
+        
+        for prompt_text, response_text in zip(examples["input"], examples["output"]):
+            prompt_ids = tokenizer.encode(prompt_text, add_special_tokens=True)
+            response_ids = tokenizer.encode(response_text, add_special_tokens=False)
+            response_ids.append(tokenizer.eos_token_id)
 
-        prompt_ids = tokenizer.encode(prompt_text, add_special_tokens=True)
-        response_ids = tokenizer.encode(response_text, add_special_tokens=False)
-        response_ids.append(tokenizer.eos_token_id)
+            input_ids = prompt_ids + response_ids
+            labels = [-100] * len(prompt_ids) + response_ids
 
-        input_ids = prompt_ids + response_ids
-        labels = [-100] * len(prompt_ids) + response_ids
+            if len(input_ids) > MAX_LENGTH:
+                input_ids = input_ids[:MAX_LENGTH]
+                labels = labels[:MAX_LENGTH]
 
-        if len(input_ids) > MAX_LENGTH:
-            input_ids = input_ids[:MAX_LENGTH]
-            labels = labels[:MAX_LENGTH]
+            attention_mask = [1] * len(input_ids)
 
-        attention_mask = [1] * len(input_ids)
+            input_ids_list.append(input_ids)
+            attn_masks.append(attention_mask)
+            label_list.append(labels)
 
         return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "labels": labels
+            "input_ids": input_ids_list,
+            "attention_mask": attn_masks,
+            "labels": label_list,
         }
 
     print("Loading and preparing datasets...")
-    raw_dataset = load_dataset("json", data_files=args.train_data_path, split="train")
+    full_dataset = load_dataset("json", data_files=args.train_data_path, split="train")
     print(f"Dataset columns: {full_dataset.column_names}")
     
     split_dataset = full_dataset.train_test_split(test_size=0.01, seed=42)

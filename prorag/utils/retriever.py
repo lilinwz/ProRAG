@@ -1,5 +1,6 @@
 from typing import List
 import aiohttp
+import requests
 
 class RemoteRetriever:
     def __init__(self, url: str="http://localhost:8000/retrieve", topk: int=3):
