@@ -52,7 +52,7 @@ Our framework consists of four progressive stages:
 3.  **PRM-Guided Reasoning Refinement (RFT):** Align the policy with fine-grained process preferences to mitigate the cold-start problem.
 4.  **Process-Supervised Reinforcement Learning:** Optimize with a **dual-granularity advantage mechanism** that aggregates step-level process rewards with global outcome signals.
 
-![Framework](assets/framework.png)
+![Framework](assets/framework.jpg)
 
 ---
 
