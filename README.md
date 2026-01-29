@@ -111,7 +111,6 @@ Our training pipeline corresponds strictly to the four stages described in the p
 
 ### 0. Start Retrieval Service
 Before running any training or generation tasks, you need to start the retrieval service.
-**Note:** Please switch to the `retriever` environment.
 
 ```bash
 conda activate retriever
