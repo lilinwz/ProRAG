@@ -102,13 +102,16 @@ async def main(args):
             jobs = traverse_and_collect_jobs(tree_obj.get('mcts_tree', {}), tree_obj.get('question', ''), "")
             all_jobs.extend(jobs)
     
+    for i, job in enumerate(all_jobs):
+        job['id'] = i
+        
     print(f"Collected {len(all_jobs)} jobs.")
 
     engine = AsyncLLMEngine(
-        deployment_name="gpt-4o_2024-11-20",
-        endpoint = f"https://trapi.research.microsoft.com/gcr/shared",
-        concurrency=args.concurrency,
-        use_azure_identity=True
+        model=args.model,
+        api_key=args.api_key,
+        base_url=args.base_url,
+        concurrency=args.concurrency
     )
 
     system_prompt = build_filter_system_prompt()
@@ -125,7 +128,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process MCTS trees to generate pairwise training data.")
     parser.add_argument("--input_file", type=str, required=True, help="Path to the input JSONL file containing MCTS trees")
     parser.add_argument("--output_file", type=str, required=True, help="Path to save the output training data")
-    parser.add_argument("--concurrency", type=int, default=50, help="Concurrency limit for Azure OpenAI requests")
+
+    parser.add_argument("--model", type=str, default="gpt-4o", help="Model name (e.g. gpt-4o, deepseek-chat)")
+    parser.add_argument("--concurrency", type=int, default=10, help="Async request concurrency")
+
+    parser.add_argument("--api_key", type=str, default=None, help="Optional: OpenAI API Key (or use env var)")
+    parser.add_argument("--base_url", type=str, default=None, help="Optional: Custom API Base URL")
+    
     args = parser.parse_args()
     
     asyncio.run(main(args))

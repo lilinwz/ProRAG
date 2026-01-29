@@ -2,7 +2,7 @@
 
 # 🧩 ProRAG: Process-Supervised Reinforcement Learning for Retrieval-Augmented Generation
 
-[![arXiv](https://img.shields.io/badge/arXiv-2503.xxxxx-b31b1b.svg)](https://arxiv.org/abs/2503.xxxxx)
+<!-- [![arXiv](https://img.shields.io/badge/arXiv-2503.xxxxx-b31b1b.svg)](https://arxiv.org/abs/2503.xxxxx) -->
 [![Hugging Face](https://img.shields.io/badge/🤗_Hugging_Face-Model-yellow)](https://huggingface.co/collections/bmbgsj/prorag)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/downloads/)
@@ -15,8 +15,9 @@
 
 ## 📢 Latest News
 
-- **[Coming Soon]** 📄 Paper will be available on **[arXiv](https://arxiv.org/abs/2503.xxxxx)**.
-- **[Coming Soon]** 🚀 Code and Models will be released.
+- **[Coming Soon]** 📄 Paper will be available on **arXiv**.
+- **[January 29, 2026]** 🤗 Models released on **[Hugging Face](https://huggingface.co/collections/bmbgsj/prorag)**.
+
 
 ---
 
@@ -58,7 +59,7 @@ Our framework consists of four progressive stages:
 
 ## 🚀 Installation
 
-### Prerequisities
+### Prerequisites
 - Python 3.13+
 - CUDA 12.x (Recommended)
 
@@ -112,6 +113,8 @@ Our training pipeline corresponds strictly to the four stages described in the p
 Prepare the data for training (e.g., formatting PopQA, HotpotQA, etc.).
 
 ```bash
+# This step requires an API Key (OpenAI/DeepSeek/vLLM)
+export OPENAI_API_KEY="YOUR_KEY"
 bash scripts/preprocess.sh
 ```
 
@@ -126,8 +129,12 @@ bash scripts/sft.sh
 Train the Process Reward Model (PRM) using contrastive pairs collected via **Monte Carlo Tree Search (MCTS)**. This model provides step-level feedback.
 
 ```bash
+# Ensure you have sufficient GPU memory for vLLM servers
+export OPENAI_API_KEY="YOUR_KEY"
 bash scripts/prm.sh
 ```
+
+> **⚠️ Note:** Ensure your GPUs have sufficient memory. The script automatically spins up vLLM servers on GPUs 0-3 for parallel MCTS generation, and then releases resources for the subsequent PRM training.
 
 ### 4. Stage 3: Reasoning Refinement
 Perform Rejection Sampling Fine-Tuning (RFT) using high-quality trajectories filtered by the PRM. This step bridges the gap between SFT and RL.
@@ -143,7 +150,7 @@ Finally, run the online reinforcement learning with the **Dual-Granularity Advan
 bash scripts/rl.sh
 ```
 
----
+<!-- ---
 
 ## 📝 Citation
 
@@ -156,7 +163,7 @@ If you find ProRAG useful in your research, please cite our paper:
   journal={arXiv preprint arXiv:xxxx.xxxxx},
   year={2026}
 }
-```
+``` -->
 
 ---
 

@@ -46,10 +46,10 @@ async def main(args):
         system_prompt = build_cot_system_prompt()
 
     engine = AsyncLLMEngine(
-        deployment_name="gpt-4o_2024-11-20",
-        endpoint = f"https://trapi.research.microsoft.com/gcr/shared",
-        concurrency=args.concurrency,
-        use_azure_identity=True
+        model=args.model,
+        api_key=args.api_key,
+        base_url=args.base_url,
+        concurrency=args.concurrency
     )
 
     print("🚀 Starting LLM generation...")
@@ -66,6 +66,11 @@ if __name__ == "__main__":
     parser.add_argument("--task", required=True)
     parser.add_argument("--input_file", required=True)
     parser.add_argument("--output_file", required=True)
-    parser.add_argument("--concurrency", type=int, default=10)
+
+    parser.add_argument("--model", type=str, default="gpt-4o", help="Model name (e.g. gpt-4o, deepseek-chat)")
+    parser.add_argument("--concurrency", type=int, default=10, help="Async request concurrency")
+
+    parser.add_argument("--api_key", type=str, default=None, help="Optional: OpenAI API Key (or use env var)")
+    parser.add_argument("--base_url", type=str, default=None, help="Optional: Custom API Base URL")
     args = parser.parse_args()
     asyncio.run(main(args))

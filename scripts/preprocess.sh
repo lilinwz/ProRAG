@@ -1,12 +1,14 @@
 #!/bin/bash
 set -e
 
+export OPENAI_API_KEY="${OPENAI_API_KEY:-YOUR_API_KEY_HERE}"
+
 echo "[1/4] Downloading raw data..."
 python -m prorag.data.download \
   --input bdsaglam/musique \
   --repo_filename musique_ans_v1.0_train.jsonl \
   --output_file data/raw/sft.jsonl \
-  --dump_file data/raw/mulsique.jsonl
+  --dump_file data/raw/musique.jsonl
 
 python -m prorag.data.download \
   --input hotpotqa/hotpot_qa \
@@ -18,6 +20,7 @@ python -m prorag.data.generate \
     --task clean \
     --input_file data/raw/sft.jsonl \
     --output_file data/raw/sft_cleaned.jsonl \
+    --model gpt-4o \
     --concurrency 10
 
 echo "[3/4] Generating CoT (Reasoning)..."
@@ -25,6 +28,7 @@ python -m prorag.data.generate \
     --task cot \
     --input_file data/raw/sft_cleaned.jsonl \
     --output_file data/raw/sft_gen.jsonl \
+    --model gpt-4o \
     --concurrency 10
 
 echo "[4/4] Constructing SFT dataset..."
