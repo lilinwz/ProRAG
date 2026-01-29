@@ -26,15 +26,15 @@
 - [Overview](#-overview)
 - [Repository Structure](#-repository-structure)
 - [Installation](#-installation)
-  - [Prerequisites](#prerequisities)
+  - [Prerequisites](#prerequisites)
   - [ProRAG Environment](#prorag-environment)
   - [Retriever Environment](#retriever-environment-optional)
 - [Usage](#-usage)
-  - [Data Preprocessing](#1-data-preprocessing)
-  - [Stage 1: Supervised Policy Warmup](#2-stage-1-supervised-policy-warmup)
-  - [Stage 2: Process Reward Modeling](#3-stage-2-process-reward-modeling)
-  - [Stage 3: Reasoning Refinement](#4-stage-3-reasoning-refinement)
-  - [Stage 4: Process-Supervised RL](#5-stage-4-process-supervised-rl)
+  - [Step 0: Retrieval Service & Data](#0-retrieval-service--data)
+  - [Stage 1: Supervised Policy Warmup](#1-supervised-policy-warmup)
+  - [Stage 2: Process Reward Modeling](#2-process-reward-modeling)
+  - [Stage 3: Reasoning Refinement](#3-reasoning-refinement)
+  - [Stage 4: Process-Supervised RL](#4-process-supervised-rl)
 - [Citation](#-citation)
 - [License](#-license)
 
@@ -109,8 +109,8 @@ pip install uvicorn fastapi
 
 Our training pipeline corresponds strictly to the four stages described in the paper. 
 
-### 0. Start Retrieval Service
-Before running any training or generation tasks, you need to start the retrieval service.
+### 0. Retrieval Service & Data
+Before running any training or generation tasks, you need to start the retrieval service and prepare the data for training.
 
 ```bash
 conda activate retriever
@@ -124,25 +124,22 @@ bash search/retrieval_launch.sh
 ```
 > Tip: Keep this terminal open. Open a new terminal and activate prorag for the next steps.
 
-### 1. Data Preprocessing
-Prepare the data for training (e.g., formatting PopQA, HotpotQA, etc.).
-
 ```bash
 conda activate prorag
 
-# This step requires an API Key (OpenAI/DeepSeek/vLLM)
+# Data Preprocessing requires an API Key (OpenAI/DeepSeek/vLLM)
 export OPENAI_API_KEY="YOUR_KEY"
 bash scripts/preprocess.sh
 ```
 
-### 2. Stage 1: Supervised Policy Warmup
+### 1. Supervised Policy Warmup
 Fine-tune the model using constructed datasets with structured reasoning-action formats to establish a reference policy ($\pi_{sft}$).
 
 ```bash
 bash scripts/sft.sh
 ```
 
-### 3. Stage 2: Process Reward Modeling
+### 2. Process Reward Modeling
 Train the Process Reward Model (PRM) using contrastive pairs collected via **Monte Carlo Tree Search (MCTS)**. This model provides step-level feedback.
 
 ```bash
@@ -153,14 +150,14 @@ bash scripts/prm.sh
 
 > **⚠️ Note:** Ensure your GPUs have sufficient memory. The script automatically spins up vLLM servers on GPUs 0-3 for parallel MCTS generation, and then releases resources for the subsequent PRM training.
 
-### 4. Stage 3: Reasoning Refinement
+### 3. Reasoning Refinement
 Perform Rejection Sampling Fine-Tuning (RFT) using high-quality trajectories filtered by the PRM. This step bridges the gap between SFT and RL.
 
 ```bash
 bash scripts/rft.sh
 ```
 
-### 5. Stage 4: Process-Supervised RL
+### 4. Process-Supervised RL
 Finally, run the online reinforcement learning with the **Dual-Granularity Advantage** mechanism, combining outcome rewards and process rewards.
 
 ```bash
