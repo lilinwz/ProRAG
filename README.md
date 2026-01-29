@@ -107,12 +107,30 @@ pip install uvicorn fastapi
 
 ## 💻 Usage
 
-Our training pipeline corresponds strictly to the four stages described in the paper. Ensure you have activated the `prorag` environment.
+Our training pipeline corresponds strictly to the four stages described in the paper. 
+
+### 0. Start Retrieval Service
+Before running any training or generation tasks, you need to start the retrieval service.
+**Note:** Please switch to the `retriever` environment.
+
+```bash
+conda activate retriever
+export RETRIEVAL_PATH="data/indices/wikipedia"
+
+# 1. Download Index
+bash search/download.sh
+
+# 2. Launch Service
+bash search/retrieval_launch.sh
+```
+> Tip: Keep this terminal open. Open a new terminal and activate prorag for the next steps.
 
 ### 1. Data Preprocessing
 Prepare the data for training (e.g., formatting PopQA, HotpotQA, etc.).
 
 ```bash
+conda activate prorag
+
 # This step requires an API Key (OpenAI/DeepSeek/vLLM)
 export OPENAI_API_KEY="YOUR_KEY"
 bash scripts/preprocess.sh

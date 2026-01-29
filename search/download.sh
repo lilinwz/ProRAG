@@ -1,4 +1,9 @@
-save_path=/home/aiscuser/corpus
-python download.py --save_path $save_path
-cat $save_path/part_* > $save_path/e5_Flat.index
-gzip -d $save_path/wiki-18.jsonl.gz
+#!/bin/bash
+set -e
+
+SAVE_PATH="${RETRIEVAL_PATH:-data/wikipedia}"
+mkdir -p "$SAVE_PATH"
+
+python search/download.py --save_path $SAVE_PATH
+cat $SAVE_PATH/part_* > $SAVE_PATH/e5_Flat.index
+gzip -d $SAVE_PATH/wiki-18.jsonl.gz
