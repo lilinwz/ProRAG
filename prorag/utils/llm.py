@@ -127,7 +127,10 @@ class AsyncLLMEngine:
                 if result_parser:
                     return result_parser(item, parsed_response)
                 else:
-                    item["response_data"].update(parsed_response)
+                    if "response_data" in item:
+                        item["response_data"].update(parsed_response)
+                    else:
+                        item["response_data"] = parsed_response
                     return item
             except Exception as e:
                 print(f"❌ Error processing {uid}: {e}")

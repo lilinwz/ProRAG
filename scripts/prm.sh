@@ -56,8 +56,8 @@ CUDA_VISIBLE_DEVICES=3 nohup python -m vllm.entrypoints.openai.api_server \
     > server_3.log 2>&1 &
 pids+=($!)
 
-echo "Waiting for servers to initialize (sleep 1 min)..."
-sleep 80
+echo "Waiting for servers to initialize ..."
+sleep 90
 
 echo "Running MCTS..."
 python -m prorag.prm.mcts \
