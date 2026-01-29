@@ -7,7 +7,7 @@ accelerate launch \
     --config_file configs/ds.yaml \
     prorag/rl/train.py \
     --model_path saves/rft \
-    --prm_path saves/prm_wiki \
+    --prm_path saves/prm \
     --train_data_path data/train_rl.jsonl \
     --output_dir saves/rl \
     --num_train_epochs 1 \

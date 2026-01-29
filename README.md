@@ -163,12 +163,3 @@ If you find ProRAG useful in your research, please cite our paper:
 ## 📄 License
 
 This project is licensed under the MIT License.
-
----
-
-<div align="center">
-
-[⬆ Back to Top](#prorag)
-
-</div>
-```

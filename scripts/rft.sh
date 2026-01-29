@@ -7,7 +7,7 @@ python -m prorag.rft.filter_em \
     --output_path data/raw/rft.jsonl
 
 python -m prorag.rft.filter_prm \
-    --model_path saves/prm_wiki \
+    --model_path saves/prm \
     --data_path data/raw/rft.jsonl \
     --output_path data/train_rft.jsonl
 
