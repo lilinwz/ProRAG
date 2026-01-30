@@ -2,7 +2,7 @@
 
 # 🧩 ProRAG: Process-Supervised Reinforcement Learning for Retrieval-Augmented Generation
 
-<!-- [![arXiv](https://img.shields.io/badge/arXiv-2503.xxxxx-b31b1b.svg)](https://arxiv.org/abs/2503.xxxxx) -->
+[![arXiv](https://img.shields.io/badge/arXiv-2601.21912-b31b1b.svg)](https://arxiv.org/abs/2601.21912)
 [![Hugging Face](https://img.shields.io/badge/🤗_Hugging_Face-Model-yellow)](https://huggingface.co/collections/bmbgsj/prorag)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/downloads/)
@@ -15,8 +15,8 @@
 
 ## 📢 Latest News
 
-- **[Coming Soon]** 📄 Paper will be available on **arXiv**.
-- **[January 29, 2026]** 🤗 Models released on **[Hugging Face](https://huggingface.co/collections/bmbgsj/prorag)**.
+- **[January 30, 2026]** 📄 Our paper is now available on **[arXiv](https://arxiv.org/abs/2601.21912)**.
+- **[January 29, 2026]** 🤗 We have released our models on **[Hugging Face](https://huggingface.co/collections/bmbgsj/prorag)**.
 
 
 ---
@@ -164,20 +164,17 @@ Finally, run the online reinforcement learning with the **Dual-Granularity Advan
 bash scripts/rl.sh
 ```
 
-<!-- ---
-
 ## 📝 Citation
 
-If you find ProRAG useful in your research, please cite our paper:
-
-```bibtex
-@article{prorag2026,
-  title={ProRAG: Process-Supervised Reinforcement Learning for Retrieval-Augmented Generation},
-  author={Anonymous Author(s)},
-  journal={arXiv preprint arXiv:xxxx.xxxxx},
-  year={2026}
+@misc{wang2026proragprocesssupervisedreinforcementlearning,
+      title={ProRAG: Process-Supervised Reinforcement Learning for Retrieval-Augmented Generation}, 
+      author={Zhao Wang and Ziliang Zhao and Zhicheng Dou},
+      year={2026},
+      eprint={2601.21912},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2601.21912}, 
 }
-``` -->
 
 ---
 
